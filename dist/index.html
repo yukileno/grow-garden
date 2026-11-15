@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7ed">
+  <meta name="description" content="種を植えて、天気を待って、変異した作物を育てる農園ゲーム。">
+  <title>こもれび農園</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="garden.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="frame topinner">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">🌱</span><span>こもれび農園<small>KOMOREBI GARDEN</small></span></div>
+      <div class="top-actions">
+        <div class="balance"><span class="coin" aria-hidden="true">S</span><span><b id="balance">0</b><small>シェックル</small></span></div>
+        <button class="help-button" data-action="help" aria-label="遊び方">?</button>
+      </div>
+    </div>
+  </header>
+  <main class="frame">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-text">
+        <h1 id="hero-title">こもれび農園</h1>
+        <p>種を植えて、時間とともに育つ小さな農園。</p>
+      </div>
+      <div class="weather" id="weather"></div>
+    </section>
+    <div class="dashboard">
+      <section class="panel garden" aria-labelledby="garden-title">
+        <div class="section-head">
+          <div class="section-title"><span class="section-icon green" aria-hidden="true">🌿</span><div><h2 id="garden-title">わたしの畑</h2><p id="plot-count"></p></div></div>
+          <button class="soft-button" data-action="harvest-all">収穫できる作物を取る</button>
+        </div>
+        <div class="plots" id="plots"></div>
+        <div class="seed-tray">
+          <div class="section-title"><span class="section-icon tan" aria-hidden="true">🧺</span><div><h3>種のバッグ</h3><p>種を選んで空き区画を押す</p></div></div>
+          <div class="seed-options" id="seeds"></div>
+        </div>
+        <div class="effects" id="effects" hidden></div>
+      </section>
+      <aside class="panel market" aria-labelledby="market-title">
+        <div class="section-head">
+          <div class="section-title"><span class="section-icon tan" aria-hidden="true">🏡</span><div><h2 id="market-title">村のお店</h2><p>種・道具・卵を買う</p></div></div>
+          <div class="restock"><small>次の入荷</small><b id="restock">--:--</b></div>
+        </div>
+        <nav class="market-tabs" aria-label="お店の種類">
+          <button data-action="tab" data-key="seeds" aria-pressed="true">🌱 種屋</button>
+          <button data-action="tab" data-key="gear" aria-pressed="false">🛠️ 道具屋</button>
+          <button data-action="tab" data-key="eggs" aria-pressed="false">🥚 卵屋</button>
+        </nav>
+        <div class="shop-list" id="shop"></div>
+      </aside>
+      <section class="panel basket" aria-labelledby="basket-title">
+        <div class="section-head">
+          <div class="section-title"><span class="section-icon tan" aria-hidden="true">🧺</span><div><h2 id="basket-title">収穫かご</h2><p id="basket-count"></p></div></div>
+          <button class="primary-button" id="sell" data-action="sell">まとめて売る</button>
+        </div>
+        <div id="basket-items" class="basket-items"></div>
+      </section>
+    </div>
+    <footer><span>🌱 こもれび農園</span><span id="save-label">このブラウザに自動保存</span></footer>
+  </main>
+  <dialog id="dialog"></dialog>
+  <div id="toast" class="toast" role="status"></div>
+</body>
+</html>
