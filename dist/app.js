@@ -6,6 +6,9 @@ const dialog = byId("dialog");
 let tab = "seeds";
 let dialogPlot = null;
 let confirmClear = false;
+let problem;
+let mathMode = "add";
+let transplantSource = null;
 let toastTimer;
 let savedText;
 
@@ -122,14 +125,17 @@ function renderShop(now) {
   for (const button of document.querySelectorAll('[data-action="tab"]')) {
     button.setAttribute("aria-pressed", button.dataset.key === tab);
   }
-  fill("shop", Garden.stock(tab, now, state).map(({ key, item, left }) => {
+  const offers = Garden.stock(tab, now, state);
+  byId("market-title").textContent = { seeds: "種屋", gear: "道具屋", eggs: "卵屋" }[tab];
+  byId("shop-summary").textContent = `全 ${offers.length} 種類 · 入荷中 ${offers.filter(offer => offer.left).length} 種類`;
+  fill("shop", offers.map(({ key, item, left }) => {
     const description = tab === "seeds"
       ? `${item.tier} · ${item.repeat ? "繰り返し収穫" : "一度だけ収穫"}`
       : item.description ?? `孵化まで ${clock(item.seconds * 1000)}`;
     return `<article class="shop-row">
       <span class="item-icon ${left ? "" : "unavailable"}" aria-hidden="true">${tab === "seeds" ? cropIcon(key) : item.icon}</span>
-      <div class="shop-info"><strong>${item.name}</strong><small>${description}</small><small class="${left ? "in-stock" : ""}">${left ? `在庫 ${left}` : "在庫なし"}</small></div>
-      <button class="buy" data-action="buy" data-key="${key}" aria-label="${item.name}を ${format(item.cost)} シェックルで購入" ${left && state.money >= item.cost ? "" : "disabled"}><span class="mini-coin" aria-hidden="true">S</span> ${format(item.cost)}</button>
+      <div class="shop-info"><strong>${item.name}</strong><small>${description}</small><small class="${left ? "in-stock" : ""}">${item.status ?? (left ? `在庫 ${left}` : "在庫なし")}</small></div>
+      ${item.cost === null ? "" : `<button class="buy" data-action="buy" data-key="${key}" aria-label="${item.name}を ${format(item.cost)} シェックルで購入" ${left && state.money >= item.cost ? "" : "disabled"}><span class="mini-coin" aria-hidden="true">◈</span> ${format(item.cost)}</button>`}
     </article>`;
   }).join(""));
 }
@@ -137,11 +143,14 @@ function renderShop(now) {
 function renderEffects(now) {
   const lines = [];
   if (state.boost) lines.push(`<span class="effect">💦 ${Garden.gear[state.boost.key].name} · ${clock(state.boost.ends - now)}</span>`);
+  for (const effect of Object.values(state.avatarEffects ?? {})) {
+    if (effect.ends > now) lines.push(`<span class="effect">🍄 ${Garden.gear[effect.key].name} · ${clock(effect.ends - now)}</span>`);
+  }
   if (state.rod) lines.push(`<span class="effect">⚡ 避雷針 · 残り${state.rod}回</span>`);
   for (const [key, count] of Object.entries(state.gear)) {
     if (count <= 0) continue;
     const gear = Garden.gear[key];
-    const usable = ["sprinkler", "master", "rod"].includes(key);
+    const usable = gear.speed || gear.avatarEffect || key === "rod";
     lines.push(usable
       ? `<button class="seed-button" data-action="gear" data-key="${key}">${gear.icon} ${gear.name} ×${count} を使う</button>`
       : `<span class="effect" title="作物の鑑定画面で使用">${gear.icon} ${gear.name} ×${count}</span>`);
@@ -162,11 +171,11 @@ function renderEffects(now) {
 
 function renderBasket() {
   const total = state.basket.reduce((sum, fruit) => sum + Garden.value(fruit), 0);
-  byId("basket-count").textContent = `${state.basket.length}個 · 売値 ${format(total)} S`;
+  byId("basket-count").textContent = `${state.basket.length}個 · 売値 ${format(total)} シェックル`;
   byId("sell").disabled = !total;
   fill("basket-items", state.basket.map(fruit => {
     const crop = Garden.crops[fruit.key];
-    return `<div class="basket-item"><span aria-hidden="true">${cropIcon(fruit.key)}</span><div><strong>${crop.name}</strong><small>${fruit.weight.toFixed(2)} kg ${tags(fruit)}</small></div><b>${format(Garden.value(fruit))} S</b></div>`;
+    return `<div class="basket-item"><span aria-hidden="true">${cropIcon(fruit.key)}</span><div><strong>${crop.name}</strong><small>${fruit.weight.toFixed(2)} キロ ${tags(fruit)}</small></div><b>${format(Garden.value(fruit))} シェックル</b></div>`;
   }).join("") || '<p class="basket-empty">収穫した作物がここに入ります。</p>');
 }
 
@@ -202,12 +211,13 @@ function renderInspection(index) {
   }
   displayDialog(`<div class="dialog-icon" aria-hidden="true">${fruit ? cropIcon(plot.key) : "🌱"}</div><h2 id="dialog-title">${crop.name}</h2>
     <p>${crop.repeat ? "収穫しても株が残り、また実がなります。" : "収穫すると区画が空きます。"}</p>
-    ${fruit ? `<div class="inspection"><span>重さ <b>${fruit.weight.toFixed(2)} kg</b></span><span>売値 <b>${format(Garden.value(fruit))} S</b></span></div>
+    ${fruit ? `<div class="inspection"><span>重さ <b>${fruit.weight.toFixed(2)} キロ</b></span><span>売値 <b>${format(Garden.value(fruit))} シェックル</b></span></div>
     <div class="dialog-tags">${tags(fruit) || '<span class="muted">変異なし</span>'}</div>` : `<p>成長中 · ${Math.floor(100 * plot.progress / Garden.duration(plot))}%</p>`}
     <div class="dialog-actions">
       ${fruit ? `<button class="primary-button" data-action="harvest" data-key="${index}" ${plot.locked ? "disabled" : ""}>収穫する</button>` : ""}
       ${plot.locked || state.gear.lock ? `<button class="soft-button" data-action="lock" data-key="${index}">${plot.locked ? "ロックを解除" : "🔒 ロックする"}</button>` : ""}
       ${fruit && state.gear.spray ? `<button class="soft-button" data-action="spray" data-key="${index}">🧪 スプレーを使う</button>` : ""}
+      ${!plot.locked && state.gear.trowel ? `<button class="soft-button" data-action="transplant" data-key="${index}">作物を移す</button>` : ""}
       ${!plot.locked ? '<button class="soft-button" data-action="confirm-clear">区画を空ける</button>' : ""}
     </div>`);
 }
@@ -217,9 +227,52 @@ function help() {
   displayDialog(`<div class="dialog-icon" aria-hidden="true">🌱</div><h2 id="dialog-title">遊び方</h2>
     <ol class="help-list"><li>WASDまたは矢印で移動し、ドラッグで視点を回します。スペースでジャンプします。</li>
     <li>下の持ち物から種を装備し、近くの土をクリックするか E を押します。作物を調べると、売値と変異を確認できます。</li>
-    <li>SEEDS・GARDEN・SELL でワープできます。売店の店員に近づいて E で取引します。</li></ol>
+    <li>「種屋」「わたしの畑」「売却所」でワープできます。売店の店員に近づいて E で取引します。</li>
+    <li>「算数教室」で問題に正解すると、種や道具に使えるシェックルがもらえます。</li></ol>
     <p>農園はブラウザに保存され、閉じている間も作物が育ちます。種屋と道具屋は5分、卵屋は30分ごとに入荷します。</p>`);
 }
+
+function renderMath(focus) {
+  const { label, reward, symbol } = FarmMath.modes[problem.mode];
+  const { correct, earned } = state.math ?? { correct: 0, earned: 0 };
+  displayDialog(`<div class="math-heading"><span aria-hidden="true">✏️</span><div><h2 id="dialog-title">算数教室</h2>
+    <p>正解してシェックルを集めよう。</p></div></div>
+    <div class="math-modes" aria-label="計算の種類">${Object.entries(FarmMath.modes).map(([key, mode]) =>
+      `<button class="soft-button" data-action="math-mode" data-key="${key}" aria-pressed="${key === mathMode}">${mode.label}</button>`).join("")}</div>
+    <div class="math-problem"><small>${label} · 正解で ${reward} シェックル</small>
+      <div class="equation">${problem.left} ${symbol} ${problem.right} ＝ ${problem.solved ? problem.answer : "？"}</div></div>
+    ${problem.solved
+      ? `<p class="math-feedback correct" role="status">正解！ ${reward} シェックルもらいました。</p><button class="primary-button math-next" data-action="math-next">次の問題</button>`
+      : `<form id="math-form" novalidate><label class="math-answer">答え<input id="math-answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="6" aria-describedby="math-feedback"></label><button class="primary-button">答え合わせ</button></form>
+         <p id="math-feedback" class="math-feedback" role="status"></p>`}
+    <div class="math-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span></div>`);
+  if (focus) dialog.querySelector(focus)?.focus();
+}
+
+function showMath() {
+  dialogPlot = null;
+  problem ??= FarmMath.question(mathMode);
+  renderMath(problem.solved ? '[data-action="math-next"]' : "#math-answer");
+}
+
+document.addEventListener("submit", event => {
+  if (event.target.id !== "math-form") return;
+  event.preventDefault();
+  sync();
+  const now = Date.now();
+  Garden.advance(state, now);
+  const input = byId("math-answer");
+  const result = FarmMath.check(state, problem, input.value);
+  if (result === "correct") {
+    save();
+    render(now);
+    renderMath('[data-action="math-next"]');
+  } else if (result !== "solved") {
+    byId("math-feedback").textContent = result === "invalid" ? "答えを数字で入力してね。" : `もう一度考えてみよう。 ${FarmMath.modes[problem.mode].tip}`;
+    input.focus();
+    input.select();
+  }
+});
 
 dialog.setAttribute("aria-labelledby", "dialog-title");
 dialog.addEventListener("close", () => {
@@ -241,10 +294,27 @@ document.addEventListener("click", event => {
 
   switch (action) {
     case "help": help(); break;
+    case "math-mode":
+      if (key === mathMode) break;
+      mathMode = key;
+      problem = FarmMath.question(mathMode, problem);
+      renderMath("#math-answer");
+      return;
+    case "math-next":
+      if (!problem?.solved) break;
+      problem = FarmMath.question(mathMode, problem);
+      renderMath("#math-answer");
+      return;
     case "close": dialog.close(); break;
     case "tab": tab = key; break;
     case "seed": selected = key; break;
     case "plot":
+      if (transplantSource !== null && !state.plots[key]) {
+        changed = Garden.transplant(state, transplantSource, key);
+        transplantSource = null;
+        notice(changed ? "作物を移しました" : "作物を移せませんでした");
+        break;
+      }
       if (state.plots[key]) {
         dialogPlot = Number(key);
         renderInspection(dialogPlot);
@@ -274,6 +344,11 @@ document.addEventListener("click", event => {
       break;
     }
     case "confirm-clear": confirmClear = true; break;
+    case "transplant":
+      transplantSource = Number(key);
+      dialog.close();
+      notice("移したい空き区画を選んでください");
+      break;
     case "cancel-clear": confirmClear = false; break;
     case "clear-plot":
       if (state.plots[key] && !state.plots[key].locked) {
@@ -291,7 +366,7 @@ document.addEventListener("click", event => {
     }
     case "gear":
       changed = Garden.useGear(state, key, now);
-      notice(changed ? `${Garden.gear[key].name}を設置しました` : "スプリンクラーは1台ずつ使えます");
+      notice(changed ? `${Garden.gear[key].name}を使いました` : "先に使った道具の効果が続いています");
       break;
     case "lock":
       if (state.plots[key]?.locked) {
@@ -344,6 +419,8 @@ window.addEventListener("storage", event => {
 window.gardenWorld = {
   get state() { return state; },
   get selected() { return selected; },
+  get transplanting() { return transplantSource !== null; },
+  cancelTransplant() { transplantSource = null; },
   select(key) {
     if (state.seeds[key] > 0) {
       selected = key;
@@ -357,4 +434,5 @@ window.gardenWorld = {
     document.querySelector(`[data-action="tab"][data-key="${kind}"]`)?.click();
   },
   help,
+  showMath,
 };

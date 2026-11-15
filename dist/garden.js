@@ -1,8 +1,8 @@
-const Garden = (() => {
+const Garden = ((catalog) => {
   const minute = 60_000;
   const weatherInterval = 3 * minute;
   const plotsTotal = 12;
-  const crops = {
+  const originalCrops = {
     carrot: { name: "ニンジン", icon: "🥕", tier: "コモン", cost: 10, base: 22, weight: 0.28, seconds: 18, stock: 12, chance: 1 },
     strawberry: { name: "イチゴ", icon: "🍓", tier: "コモン", cost: 50, base: 36, weight: 0.14, seconds: 42, repeat: 30, stock: 6, chance: 1 },
     blueberry: { name: "ブルーベリー", icon: "🫐", tier: "アンコモン", cost: 110, base: 80, weight: 0.3, seconds: 65, repeat: 48, stock: 4, chance: 0.85 },
@@ -12,9 +12,12 @@ const Garden = (() => {
     mango: { name: "マンゴー", icon: "🥭", tier: "ミシカル", cost: 8_000, base: 4_500, weight: 0.72, seconds: 300, repeat: 160, stock: 1, chance: 0.01 },
     sunflower: { name: "ひまわり", icon: "🌻", tier: "プリズマティック", cost: 35_000, base: 50_000, weight: 1.8, seconds: 430, stock: 1, chance: 0.0025 },
   };
+  const crops = { ...catalog.seeds, watermelon: originalCrops.watermelon };
+  for (const [key, item] of Object.entries(originalCrops)) {
+    crops[key].weight = item.weight;
+  }
   const gear = {
-    sprinkler: { name: "スプリンクラー", icon: "🚿", cost: 190, stock: 4, chance: 1, description: "5分間、畑全体の成長・重量・変異を強化" },
-    master: { name: "マスタースプリンクラー", icon: "💦", cost: 990, stock: 2, chance: 0.45, description: "10分間、畑全体をさらに強化" },
+    ...catalog.gear,
     rod: { name: "避雷針", icon: "⚡", cost: 340, stock: 3, chance: 1, description: "雷雨で実った作物を感電させる。3回まで" },
     spray: { name: "変異スプレー", icon: "🧪", cost: 550, stock: 2, chance: 0.5, description: "鑑定画面で作物1つにランダムな変異を付与" },
     lock: { name: "お気に入りロック", icon: "🔒", cost: 120, stock: 3, chance: 1, description: "鑑定画面から作物を収穫ロック" },
@@ -40,7 +43,7 @@ const Garden = (() => {
     storm: { name: "雷雨", icon: "⛈️", detail: "落雷で感電のチャンス", speed: 2, mutation: "Shocked", chance: 0.12 },
     meteor: { name: "流星群", icon: "🌠", detail: "星が当たると天体変異", speed: 1, mutation: "Celestial", chance: 0.15 },
   };
-  const catalogs = { seeds: crops, gear, eggs };
+  const catalogs = { seeds: catalog.seeds, gear: catalog.gear, eggs };
 
   function random(key) {
     let hash = 2166136261;
@@ -61,7 +64,9 @@ const Garden = (() => {
     const purchased = state.purchases[tab];
     return Object.entries(catalogs[tab]).map(([key, item]) => {
       const roll = random(`stock/${tab}/${key}/${cycle}`);
-      const total = roll < item.chance ? item.stock : 0;
+      const min = item.minStock ?? item.stock;
+      const quantity = min + Math.floor(random(`amount/${tab}/${key}/${cycle}`) * (item.stock - min + 1));
+      const total = !item.status && roll < item.chance ? quantity : 0;
       const used = purchased?.cycle === cycle ? (purchased.items[key] ?? 0) : 0;
       return { key, item, left: Math.max(0, total - used) };
     });
@@ -134,8 +139,10 @@ const Garden = (() => {
   function makeFruit(state, plot, boost) {
     const crop = crops[plot.key];
     const seed = `${state.salt}/${plot.id}/${plot.generation}`;
-    const boostWeight = boost === "master" ? 1.55 : boost ? 1.2 : 1;
-    const boostChance = boost === "master" ? 3 : boost ? 1.6 : 1;
+    const boosted = boost === "sprinkler" || boost?.endsWith("Sprinkler") || boost === "master";
+    const strong = boost === "master" || boost === "superSprinkler";
+    const boostWeight = strong ? 1.55 : boosted ? 1.2 : 1;
+    const boostChance = strong ? 3 : boosted ? 1.6 : 1;
     const giant = random(seed + "/giant") < 0.025 * boostChance ? 2.75 : 1;
     const weight = Math.max(0.01, Math.round(crop.weight * (0.75 + random(seed + "/weight") * 0.6) * boostWeight * giant * 100) / 100);
     const roll = random(seed + "/variant");
@@ -192,7 +199,7 @@ const Garden = (() => {
       const petTick = Math.floor(from / petInterval) + 1;
       const boost = state.boost?.ends > from ? state.boost : null;
       const sky = weather(from);
-      const speed = sky.speed * (boost?.key === "master" ? 2 : boost ? 1.5 : 1);
+      const speed = sky.speed * (gear[boost?.key]?.speed ?? 1);
       let until = Math.min(now, (cycle + 1) * weatherInterval,
         state.activePet ? petTick * petInterval : Infinity, boost?.ends ?? Infinity);
       for (const plot of state.plots) {
@@ -226,6 +233,15 @@ const Garden = (() => {
     return true;
   }
 
+  function transplant(state, source, target) {
+    const plot = state.plots[source];
+    if (!plot || plot.locked || state.plots[target] || !state.gear.trowel) return false;
+    state.plots[target] = plot;
+    state.plots[source] = null;
+    state.gear.trowel--;
+    return true;
+  }
+
   function sell(state) {
     const total = state.basket.reduce((sum, fruit) => sum + value(fruit), 0);
     state.money += total;
@@ -235,9 +251,12 @@ const Garden = (() => {
 
   function useGear(state, key, now, plot) {
     if (!state.gear[key]) return false;
-    if (key === "sprinkler" || key === "master") {
+    if (gear[key]?.speed) {
       if (state.boost) return false;
-      state.boost = { key, ends: now + (key === "master" ? 10 : 5) * minute };
+      state.boost = { key, ends: now + gear[key].minutes * minute };
+    } else if (gear[key]?.avatarEffect) {
+      state.avatarEffects ??= {};
+      state.avatarEffects[gear[key].avatarEffect] = { key, ends: now + minute };
     } else if (key === "rod") {
       state.rod += 3;
     } else if (key === "lock" && plot && !plot.locked) {
@@ -266,7 +285,7 @@ const Garden = (() => {
   }
 
   return { crops, gear, eggs, pets, mutations, weatherInterval, restockInterval, stock, buy,
-    weather, value, plant, create, advance, harvest, sell, useGear, hatch, duration };
-})();
+    weather, value, plant, create, advance, harvest, transplant, sell, useGear, hatch, duration };
+})(typeof FarmCatalog === "undefined" ? require("./catalog.js") : FarmCatalog);
 
 if (typeof module !== "undefined") module.exports = Garden;

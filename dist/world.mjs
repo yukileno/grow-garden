@@ -17,6 +17,7 @@ try {
     if (action === "sell") showPanel("sell");
     if (action === "close") panel.hidden = true;
     if (action === "help") game.help();
+    if (action === "math") game.showMath();
   });
 }
 
@@ -97,7 +98,7 @@ function start() {
     context.strokeStyle = "#ffffff43";
     context.lineWidth = 12;
     context.strokeRect(6, 6, 500, 116);
-    context.font = "900 54px Arial, sans-serif";
+    context.font = '900 62px "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif';
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.strokeStyle = "#33291c";
@@ -137,7 +138,7 @@ function start() {
     fence(x + 9, z - 7.2, x + 9, z + 7.2);
     fence(x - 9, z + 7.2, x - 2, z + 7.2);
     fence(x + 2, z + 7.2, x + 9, z + 7.2);
-    sign(scene, own ? "YOUR GARDEN" : "EMPTY", x - 5, 1.87, z + 7.24, 5.25, 1.05, own ? "#4e8b33" : "#936637");
+    sign(scene, own ? "わたしの畑" : "空き農園", x - 5, 1.87, z + 7.24, 5.25, 1.05, own ? "#4e8b33" : "#936637");
     for (let row = 0; row < 3; row++) {
       part(scene, "#9f6d38", x, .13, z - 4.4 + row * 4.35, 15.8, .26, 3.6);
       for (let col = 0; col < 4; col++) {
@@ -218,10 +219,11 @@ function start() {
     block(x, z, 7.5, 5.2);
     return target;
   }
-  const seeds = booth(-14, -14, "SEED SHOP", "seeds", "#2f87ce", "#4e89c8");
-  const sell = booth(14, -14, "SELL STUFF", "sell", "#d56b38", "#d56b38");
-  booth(-30, -15, "GEAR SHOP", "gear", "#7447a1", "#986dba");
-  booth(30, -15, "PET EGGS", "eggs", "#d59339", "#e7b64e");
+  const seeds = booth(-14, -14, "種屋", "seeds", "#2f87ce", "#4e89c8");
+  const sell = booth(14, -14, "売却所", "sell", "#d56b38", "#d56b38");
+  const classroom = booth(0, -28, "算数教室", "math", "#9154ad", "#a16fba");
+  booth(-30, -15, "道具屋", "gear", "#7447a1", "#986dba");
+  booth(30, -15, "卵屋", "eggs", "#d59339", "#e7b64e");
   for (let i = 0; i < 13; i++) {
     const x = (i - 6) * 8.8;
     const height = 5 + (i % 4) * 2.15;
@@ -265,7 +267,7 @@ function start() {
   const number = new Intl.NumberFormat("ja-JP");
   const targetPoint = new THREE.Vector3();
   const cameraPoint = new THREE.Vector3();
-  const destinations = { seeds, sell, garden: { x: -14, z: 8.1 } };
+  const destinations = { seeds, sell, math: classroom, garden: { x: -14, z: 8.1 } };
   const colors = {
     carrot: "#f07128", strawberry: "#e13845", blueberry: "#544cc7", tomato: "#e24a2d",
     watermelon: "#358b42", grape: "#853fbe", mango: "#f2ae32", sunflower: "#ffce3c",
@@ -296,7 +298,7 @@ function start() {
       target.signature = signature;
       target.crop.clear();
       if (plot) {
-        const color = plot.fruit?.variant === "Gold" ? "#ffcc34" : colors[plot.key];
+        const color = plot.fruit?.variant === "Gold" ? "#ffcc34" : Garden.crops[plot.key].color ?? colors[plot.key];
         const stem = part(target.crop, "#328335", 0, .47, 0, .19, .98, .18);
         const leafA = part(target.crop, "#5da630", -.26, .53, .08, .62, .17, .25);
         const leafB = part(target.crop, "#479d36", .24, .71, -.04, .52, .18, .24);
@@ -308,9 +310,12 @@ function start() {
             part(target.crop, color, 0, .42, 0, .58 * weight, .82 * weight, .56 * weight);
             part(target.crop, color, 0, .11, 0, .37 * weight, .28 * weight, .38 * weight);
             stem.position.y = .81;
-          } else if (plot.key === "sunflower") {
+          } else if (["sunflower", "tulip", "briarRose", "moonBloom", "hypnoBloom"].includes(plot.key)) {
             part(target.crop, color, 0, 1.1, 0, 1.03 * weight, 1.03 * weight, .24);
             part(target.crop, "#684021", 0, 1.09, .17, .52 * weight, .54 * weight, .15);
+          } else if (plot.key === "bamboo" || plot.key === "cactus") {
+            part(target.crop, color, 0, .92, 0, .31, 1.85 * weight, .33);
+            part(target.crop, "#7fc44a", -.28, 1.02, .05, .48, .25, .25);
           } else {
             for (let i = -1; i <= 1; i++) {
               const size = (i ? .48 : .68) * weight;
@@ -346,7 +351,7 @@ function start() {
       hotbar.innerHTML = inventory.map(([key, count], index) =>
         `<button data-seed="${key}" aria-pressed="${game.selected === key}"><em>${index + 1}</em><b>${key === "blueberry" ? '<i class="blueberry-art"></i>' : Garden.crops[key].icon}</b>${Garden.crops[key].name} ×${count}</button>`
       ).join("") + `<button data-world="bag"><b>🧰</b>道具・ペット</button><button data-world="basket"><b>🧺</b>収穫かご ×${state.basket.length}</button>`;
-      money.textContent = number.format(state.money) + " ¢";
+      money.textContent = number.format(state.money) + " シェックル";
     }
     const current = Garden.weather(now);
     const restock = Math.ceil((300000 - now % 300000) / 1000);
@@ -362,6 +367,7 @@ function start() {
     if (!target || !panel.hidden || document.getElementById("dialog").open) return;
     if (target.type === "plot") game.plot(target.index);
     else if (target.type === "sell") showPanel("sell");
+    else if (target.type === "math") game.showMath();
     else {
       game.shop(target.type);
       showPanel("market");
@@ -406,6 +412,7 @@ function start() {
   window.addEventListener("keydown", event => {
     const dialog = document.getElementById("dialog");
     if (event.key === "Escape" && !panel.hidden && !dialog.open) panel.hidden = true;
+    if (event.key === "Escape" && panel.hidden && !dialog.open) game.cancelTransplant();
     if (dialog.open || !panel.hidden || event.ctrlKey || event.metaKey || event.altKey) return;
     const key = aliases[event.key.toLowerCase()] ?? event.key.toLowerCase();
     if (movement.includes(key)) {
@@ -428,6 +435,7 @@ function start() {
     if (action === "bag") showPanel("bag");
     if (action === "basket") showPanel("basket");
     if (action === "help") game.help();
+    if (action === "math") { warp("math"); game.showMath(); }
     if (button === interact) activate(nearby);
   });
 
@@ -493,10 +501,15 @@ function start() {
     const dt = Math.min(.04, (timestamp - prior) / 1000);
     prior = timestamp;
     const playing = panel.hidden && !document.getElementById("dialog").open;
+    const now = Date.now();
+    const effects = game.state.avatarEffects ?? {};
+    const active = name => effects[name]?.ends > now;
+    avatar.scale.setScalar(active("size") ? (effects.size.key === "supersizeMushroom" ? 1.6 : .58) : 1);
+    avatar.visible = !active("visibility");
     const forward = playing ? Number(keys.has("w")) - Number(keys.has("s")) : 0;
     const strafe = playing ? Number(keys.has("d")) - Number(keys.has("a")) : 0;
     if (forward || strafe) {
-      const speed = (keys.has("shift") ? 11 : 7.4) * dt / Math.hypot(forward, strafe);
+      const speed = (keys.has("shift") ? 11 : 7.4) * (active("speed") ? 1.65 : 1) * dt / Math.hypot(forward, strafe);
       const dx = (Math.cos(yaw) * strafe - Math.sin(yaw) * forward) * speed;
       const dz = (-Math.sin(yaw) * strafe - Math.cos(yaw) * forward) * speed;
       const x = clamp(avatar.position.x + dx, -48, 48);
@@ -507,7 +520,7 @@ function start() {
       walk += dt * 13;
     }
     if (keys.has("jump") && playing && jumpHeight === 0) {
-      jumpSpeed = 7.5;
+      jumpSpeed = active("jump") ? 12 : 7.5;
       keys.delete("jump");
     }
     if (jumpHeight > 0 || jumpSpeed > 0) jumpSpeed -= 22 * dt;
@@ -521,7 +534,7 @@ function start() {
     }
     updateCamera(false);
     if (timestamp >= nextHud) {
-      updateHud(Date.now());
+      updateHud(now);
       nextHud = timestamp + 200;
     }
     let best = 4.4;
@@ -536,7 +549,9 @@ function start() {
     interact.hidden = !playing || !nearby;
     if (playing && nearby) {
       const plot = game.state.plots[nearby.index];
-      const label = nearby.type === "plot" ? (plot ? Garden.crops[plot.key].name + "を調べる" : "種を植える") : nearby.label;
+      const label = nearby.type === "plot"
+        ? (plot ? Garden.crops[plot.key].name + "を調べる" : game.transplanting ? "ここに移す" : "種を植える")
+        : nearby.label;
       interact.textContent = "E  " + label;
     }
     if (rain.visible) updateRain(timestamp);
