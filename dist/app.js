@@ -33,6 +33,44 @@ let selected = Object.keys(state.seeds).find(key => state.seeds[key] > 0);
 const readyBefore = state.plots.filter(plot => plot?.fruit).length;
 const lastPlayed = state.time;
 Garden.advance(state, started);
+let lastClock = performance.now();
+let countingPlay = !document.hidden;
+
+function canPlay() {
+  return FarmMath.playRemaining(state) > 0;
+}
+
+function studying() {
+  return dialog.open && dialog.querySelector(".math-heading") !== null;
+}
+
+function renderPlayTime() {
+  const remaining = FarmMath.playRemaining(state);
+  const label = byId("play-time");
+  const value = `⏳ 残り ${clock(remaining)}`;
+  if (label.textContent !== value) label.textContent = value;
+  const lock = byId("play-lock");
+  if (lock.hidden === (remaining > 0)) return;
+  lock.hidden = remaining > 0;
+  byId("gameplay").inert = !lock.hidden;
+  if (!lock.hidden) {
+    byId("interface").hidden = true;
+    if (dialog.open && !studying()) dialog.close();
+    if (!dialog.open) lock.querySelector("button").focus();
+  }
+}
+
+function accountPlayTime(resume = !document.hidden && !studying()) {
+  sync();
+  const now = performance.now();
+  if (countingPlay && canPlay()) {
+    FarmMath.spendPlayTime(state, Math.max(0, Math.round(now - lastClock)));
+    save();
+  }
+  lastClock = now;
+  countingPlay = resume && canPlay();
+  renderPlayTime();
+}
 
 function save() {
   try {
@@ -228,7 +266,7 @@ function help() {
     <ol class="help-list"><li>WASDまたは矢印で移動し、ドラッグで視点を回します。スペースでジャンプします。</li>
     <li>下の持ち物から種を装備し、近くの土をクリックするか E を押します。作物を調べると、売値と変異を確認できます。</li>
     <li>「種屋」「わたしの畑」「売却所」でワープできます。売店の店員に近づいて E で取引します。</li>
-    <li>「算数教室」で問題に正解すると、種や道具に使えるシェックルがもらえます。</li></ol>
+    <li>「算数教室」で正解すると、シェックルと農園で遊べる時間が30秒増えます。算数を解いている間は持ち時間が減りません。</li></ol>
     <p>農園はブラウザに保存され、閉じている間も作物が育ちます。種屋と道具屋は5分、卵屋は30分ごとに入荷します。</p>`);
 }
 
@@ -239,17 +277,18 @@ function renderMath(focus) {
     <p>正解してシェックルを集めよう。</p></div></div>
     <div class="math-modes" aria-label="計算の種類">${Object.entries(FarmMath.modes).map(([key, mode]) =>
       `<button class="soft-button" data-action="math-mode" data-key="${key}" aria-pressed="${key === mathMode}">${mode.label}</button>`).join("")}</div>
-    <div class="math-problem"><small>${label} · 正解で ${reward} シェックル</small>
+    <div class="math-problem"><small>${label} · 正解で ${reward} シェックルと遊べる時間30秒</small>
       <div class="equation">${problem.left} ${symbol} ${problem.right} ＝ ${problem.solved ? problem.answer : "？"}</div></div>
     ${problem.solved
-      ? `<p class="math-feedback correct" role="status">正解！ ${reward} シェックルもらいました。</p><button class="primary-button math-next" data-action="math-next">次の問題</button>`
+      ? `<p class="math-feedback correct" role="status">正解！ ${reward} シェックルと遊べる時間が30秒増えました。</p><div class="dialog-actions"><button class="primary-button math-next" data-action="math-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
       : `<form id="math-form" novalidate><label class="math-answer">答え<input id="math-answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="6" aria-describedby="math-feedback"></label><button class="primary-button">答え合わせ</button></form>
          <p id="math-feedback" class="math-feedback" role="status"></p>`}
-    <div class="math-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span></div>`);
+    <div class="math-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(FarmMath.playRemaining(state))}</b></span></div>`);
   if (focus) dialog.querySelector(focus)?.focus();
 }
 
 function showMath() {
+  accountPlayTime(false);
   dialogPlot = null;
   problem ??= FarmMath.question(mathMode);
   renderMath(problem.solved ? '[data-action="math-next"]' : "#math-answer");
@@ -258,13 +297,14 @@ function showMath() {
 document.addEventListener("submit", event => {
   if (event.target.id !== "math-form") return;
   event.preventDefault();
-  sync();
+  accountPlayTime(false);
   const now = Date.now();
   Garden.advance(state, now);
   const input = byId("math-answer");
   const result = FarmMath.check(state, problem, input.value);
   if (result === "correct") {
     save();
+    renderPlayTime();
     render(now);
     renderMath('[data-action="math-next"]');
   } else if (result !== "solved") {
@@ -278,6 +318,7 @@ dialog.setAttribute("aria-labelledby", "dialog-title");
 dialog.addEventListener("close", () => {
   dialogPlot = null;
   confirmClear = false;
+  accountPlayTime();
 });
 dialog.addEventListener("click", event => {
   if (event.target === dialog) dialog.close();
@@ -288,11 +329,13 @@ document.addEventListener("click", event => {
   if (!button || button.disabled) return;
   const { action, key } = button.dataset;
   const now = Date.now();
-  sync();
+  accountPlayTime();
+  if (!canPlay() && !["open-math", "math-mode", "math-next", "close"].includes(action)) return;
   Garden.advance(state, now);
   let changed = false;
 
   switch (action) {
+    case "open-math": showMath(); return;
     case "help": help(); break;
     case "math-mode":
       if (key === mathMode) break;
@@ -400,24 +443,29 @@ document.addEventListener("click", event => {
 
 if (savedText === undefined) save();
 render(started);
+renderPlayTime();
 const newReady = state.plots.filter(plot => plot?.fruit).length - readyBefore;
 if (started - lastPlayed > 10_000 && newReady > 0) notice(`おかえりなさい。留守の間に${newReady}区画の作物が育ちました`);
 
 function tick() {
   const now = Date.now();
   Garden.advance(state, now);
+  accountPlayTime();
   render(now);
 }
 
 setInterval(tick, 500);
+document.addEventListener("visibilitychange", () => accountPlayTime());
+window.addEventListener("pagehide", () => accountPlayTime(false));
 window.addEventListener("storage", event => {
   if (event.key !== storageKey) return;
   sync();
-  tick();
+  renderPlayTime();
 });
 
 window.gardenWorld = {
   get state() { return state; },
+  canPlay,
   get selected() { return selected; },
   get transplanting() { return transplantSource !== null; },
   cancelTransplant() { transplantSource = null; },

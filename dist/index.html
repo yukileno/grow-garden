@@ -15,6 +15,7 @@
   <script type="module" src="world.mjs"></script>
 </head>
 <body>
+  <div id="gameplay">
   <div id="world" aria-label="3D農園ワールド"></div>
   <nav class="travel" aria-label="ワープ">
     <button data-travel="seeds">種屋</button><button data-travel="garden">わたしの畑</button><button data-travel="sell">売却所</button><button data-world="math">算数教室</button>
@@ -22,6 +23,7 @@
   <aside class="world-info">
     <button class="world-button" data-world="market" aria-label="村のお店">🛒</button>
     <div class="world-weather" id="world-weather"></div>
+    <div class="world-weather" id="play-time" role="timer" aria-label="農園で遊べる残り時間"></div>
   </aside>
   <aside class="world-controls"><button class="world-button" data-world="help" aria-label="遊び方">?</button><span>WASD 移動<br>ドラッグ 視点<br>E アクション</span></aside>
   <button id="interact" class="interact" hidden></button>
@@ -91,6 +93,14 @@
     <footer><span>🌱 こもれび農園</span><span id="save-label">このブラウザに自動保存</span></footer>
   </main>
   </div>
+  </div>
+  <section id="play-lock" class="play-lock" aria-labelledby="play-lock-title" hidden>
+    <div class="play-lock-card">
+      <h2 id="play-lock-title">農園の持ち時間がなくなりました</h2>
+      <p>算数に1問正解すると、あと30秒遊べます。</p>
+      <button class="primary-button" data-action="open-math">算数を解く</button>
+    </div>
+  </section>
   <dialog id="dialog"></dialog>
   <div id="toast" class="toast" role="status"></div>
 </body>

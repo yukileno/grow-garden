@@ -1,4 +1,10 @@
 const FarmMath = (() => {
+  const playReward = 30_000;
+  const playRemaining = state => state.playMs ?? 60_000;
+
+  function spendPlayTime(state, elapsed) {
+    state.playMs = Math.max(0, playRemaining(state) - elapsed);
+  }
   const modes = {
     add: { label: "たし算", symbol: "＋", reward: 10, tip: "大きい数から、もう一方の数だけ数えてみよう。" },
     subtract: { label: "ひき算", symbol: "−", reward: 15, tip: "引く数にいくつ足すと、最初の数になるかな？" },
@@ -53,11 +59,12 @@ const FarmMath = (() => {
     state.math.correct++;
     state.math.earned += reward;
     state.money += reward;
+    state.playMs = playRemaining(state) + playReward;
     problem.solved = true;
     return "correct";
   }
 
-  return { modes, question, check };
+  return { modes, question, check, playReward, playRemaining, spendPlayTime };
 })();
 
 if (typeof module !== "undefined") module.exports = FarmMath;

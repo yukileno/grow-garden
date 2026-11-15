@@ -364,7 +364,7 @@ function start() {
   }
 
   function activate(target) {
-    if (!target || !panel.hidden || document.getElementById("dialog").open) return;
+    if (!game.canPlay() || !target || !panel.hidden || document.getElementById("dialog").open) return;
     if (target.type === "plot") game.plot(target.index);
     else if (target.type === "sell") showPanel("sell");
     else if (target.type === "math") game.showMath();
@@ -410,6 +410,7 @@ function start() {
   const aliases = { arrowup: "w", arrowleft: "a", arrowdown: "s", arrowright: "d", " ": "jump" };
   const movement = ["w", "a", "s", "d", "jump", "shift"];
   window.addEventListener("keydown", event => {
+    if (!game.canPlay()) return;
     const dialog = document.getElementById("dialog");
     if (event.key === "Escape" && !panel.hidden && !dialog.open) panel.hidden = true;
     if (event.key === "Escape" && panel.hidden && !dialog.open) game.cancelTransplant();
@@ -500,7 +501,8 @@ function start() {
   renderer.setAnimationLoop(timestamp => {
     const dt = Math.min(.04, (timestamp - prior) / 1000);
     prior = timestamp;
-    const playing = panel.hidden && !document.getElementById("dialog").open;
+    const playing = game.canPlay() && panel.hidden && !document.getElementById("dialog").open;
+    if (!game.canPlay()) keys.clear();
     const now = Date.now();
     const effects = game.state.avatarEffects ?? {};
     const active = name => effects[name]?.ends > now;
