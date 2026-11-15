@@ -1,6 +1,10 @@
 const FarmMath = (() => {
-  const playReward = 30_000;
-  const playRemaining = state => state.playMs ?? 60_000;
+  const playReward = 10_000;
+  const initialPlayTime = 90_000;
+  const maxPlayTime = 180_000;
+  const playRemaining = state => Number.isFinite(state.playMs)
+    ? Math.max(0, Math.min(maxPlayTime, state.playMs))
+    : initialPlayTime;
 
   function spendPlayTime(state, elapsed) {
     state.playMs = Math.max(0, playRemaining(state) - elapsed);
@@ -59,12 +63,12 @@ const FarmMath = (() => {
     state.math.correct++;
     state.math.earned += reward;
     state.money += reward;
-    state.playMs = playRemaining(state) + playReward;
+    state.playMs = Math.min(maxPlayTime, playRemaining(state) + playReward);
     problem.solved = true;
     return "correct";
   }
 
-  return { modes, question, check, playReward, playRemaining, spendPlayTime };
+  return { modes, question, check, playReward, maxPlayTime, playRemaining, spendPlayTime };
 })();
 
 if (typeof module !== "undefined") module.exports = FarmMath;

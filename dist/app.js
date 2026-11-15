@@ -3,6 +3,9 @@ const number = new Intl.NumberFormat("ja-JP");
 const format = value => number.format(value);
 const byId = id => document.getElementById(id);
 const dialog = byId("dialog");
+const playRewardSeconds = FarmMath.playReward / 1000;
+const maxPlayMinutes = FarmMath.maxPlayTime / 60_000;
+byId("play-lock-tip").textContent = `算数に1問正解すると、あと${playRewardSeconds}秒遊べます。`;
 let tab = "seeds";
 let dialogPlot = null;
 let confirmClear = false;
@@ -266,7 +269,7 @@ function help() {
     <ol class="help-list"><li>WASDまたは矢印で移動し、ドラッグで視点を回します。スペースでジャンプします。</li>
     <li>下の持ち物から種を装備し、近くの土をクリックするか E を押します。作物を調べると、売値と変異を確認できます。</li>
     <li>「種屋」「わたしの畑」「売却所」でワープできます。売店の店員に近づいて E で取引します。</li>
-    <li>「算数教室」で正解すると、シェックルと農園で遊べる時間が30秒増えます。算数を解いている間は持ち時間が減りません。</li></ol>
+    <li>「算数教室」で正解すると、シェックルがもらえ、農園で遊べる時間が${playRewardSeconds}秒増えます。貯められる時間は最大${maxPlayMinutes}分です。算数を解いている間は持ち時間が減りません。</li></ol>
     <p>農園はブラウザに保存され、閉じている間も作物が育ちます。種屋と道具屋は5分、卵屋は30分ごとに入荷します。</p>`);
 }
 
@@ -277,13 +280,13 @@ function renderMath(focus) {
     <p>正解してシェックルを集めよう。</p></div></div>
     <div class="math-modes" aria-label="計算の種類">${Object.entries(FarmMath.modes).map(([key, mode]) =>
       `<button class="soft-button" data-action="math-mode" data-key="${key}" aria-pressed="${key === mathMode}">${mode.label}</button>`).join("")}</div>
-    <div class="math-problem"><small>${label} · 正解で ${reward} シェックルと遊べる時間30秒</small>
+    <div class="math-problem"><small>${label} · 正解で ${reward} シェックルと遊べる時間${playRewardSeconds}秒</small>
       <div class="equation">${problem.left} ${symbol} ${problem.right} ＝ ${problem.solved ? problem.answer : "？"}</div></div>
     ${problem.solved
-      ? `<p class="math-feedback correct" role="status">正解！ ${reward} シェックルと遊べる時間が30秒増えました。</p><div class="dialog-actions"><button class="primary-button math-next" data-action="math-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
+      ? `<p class="math-feedback correct" role="status">正解！ ${reward} シェックル獲得。${FarmMath.playRemaining(state) === FarmMath.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p><div class="dialog-actions"><button class="primary-button math-next" data-action="math-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
       : `<form id="math-form" novalidate><label class="math-answer">答え<input id="math-answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="6" aria-describedby="math-feedback"></label><button class="primary-button">答え合わせ</button></form>
          <p id="math-feedback" class="math-feedback" role="status"></p>`}
-    <div class="math-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(FarmMath.playRemaining(state))}</b></span></div>`);
+    <div class="math-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(FarmMath.playRemaining(state))}</b> / ${maxPlayMinutes}分</span></div>`);
   if (focus) dialog.querySelector(focus)?.focus();
 }
 
@@ -441,7 +444,11 @@ document.addEventListener("click", event => {
   render(now);
 });
 
-if (savedText === undefined) save();
+const initialRemaining = FarmMath.playRemaining(state);
+if (savedText === undefined || state.playMs !== initialRemaining) {
+  state.playMs = initialRemaining;
+  save();
+}
 render(started);
 renderPlayTime();
 const newReady = state.plots.filter(plot => plot?.fruit).length - readyBefore;
