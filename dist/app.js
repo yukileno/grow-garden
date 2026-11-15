@@ -215,9 +215,9 @@ function renderInspection(index) {
 function help() {
   dialogPlot = null;
   displayDialog(`<div class="dialog-icon" aria-hidden="true">🌱</div><h2 id="dialog-title">遊び方</h2>
-    <ol class="help-list"><li>種のバッグで種を選び、空き区画を押します。</li>
-    <li>育った作物を押して、重さや売値を確認してから収穫します。畑に残すと、天候で変異が重なることがあります。</li>
-    <li>収穫かごから売却し、新しい種や道具、卵を買います。</li></ol>
+    <ol class="help-list"><li>WASDまたは矢印で移動し、ドラッグで視点を回します。スペースでジャンプします。</li>
+    <li>下の持ち物から種を装備し、近くの土をクリックするか E を押します。作物を調べると、売値と変異を確認できます。</li>
+    <li>SEEDS・GARDEN・SELL でワープできます。売店の店員に近づいて E で取引します。</li></ol>
     <p>農園はブラウザに保存され、閉じている間も作物が育ちます。種屋と道具屋は5分、卵屋は30分ごとに入荷します。</p>`);
 }
 
@@ -340,3 +340,21 @@ window.addEventListener("storage", event => {
   sync();
   tick();
 });
+
+window.gardenWorld = {
+  get state() { return state; },
+  get selected() { return selected; },
+  select(key) {
+    if (state.seeds[key] > 0) {
+      selected = key;
+      render(Date.now());
+    }
+  },
+  plot(index) {
+    document.querySelector(`[data-action="plot"][data-key="${index}"]`)?.click();
+  },
+  shop(kind) {
+    document.querySelector(`[data-action="tab"][data-key="${kind}"]`)?.click();
+  },
+  help,
+};
