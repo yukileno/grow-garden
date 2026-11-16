@@ -1,16 +1,17 @@
+import * as Study from "./study.mjs";
+
 const storageKey = "komorebi-garden-v1";
 const number = new Intl.NumberFormat("ja-JP");
 const format = value => number.format(value);
 const byId = id => document.getElementById(id);
 const dialog = byId("dialog");
-const playRewardSeconds = FarmMath.playReward / 1000;
-const maxPlayMinutes = FarmMath.maxPlayTime / 60_000;
-byId("play-lock-tip").textContent = `算数に1問正解すると、あと${playRewardSeconds}秒遊べます。`;
+const playRewardSeconds = Study.playReward / 1000;
+const maxPlayMinutes = Study.maxPlayTime / 60_000;
+byId("play-lock-tip").textContent = `社会の問題に1問正解すると、あと${playRewardSeconds}秒遊べます。`;
 let tab = "seeds";
 let dialogPlot = null;
 let confirmClear = false;
 let problem;
-let mathMode = "add";
 let transplantSource = null;
 let toastTimer;
 let savedText;
@@ -40,15 +41,15 @@ let lastClock = performance.now();
 let countingPlay = !document.hidden;
 
 function canPlay() {
-  return FarmMath.playRemaining(state) > 0;
+  return Study.playRemaining(state) > 0;
 }
 
 function studying() {
-  return dialog.open && dialog.querySelector(".math-heading") !== null;
+  return dialog.open && dialog.querySelector(".study-heading") !== null;
 }
 
 function renderPlayTime() {
-  const remaining = FarmMath.playRemaining(state);
+  const remaining = Study.playRemaining(state);
   const label = byId("play-time");
   const value = `⏳ 残り ${clock(remaining)}`;
   if (label.textContent !== value) label.textContent = value;
@@ -67,7 +68,7 @@ function accountPlayTime(resume = !document.hidden && !studying()) {
   sync();
   const now = performance.now();
   if (countingPlay && canPlay()) {
-    FarmMath.spendPlayTime(state, Math.max(0, Math.round(now - lastClock)));
+    Study.spendPlayTime(state, Math.max(0, Math.round(now - lastClock)));
     save();
   }
   lastClock = now;
@@ -269,49 +270,61 @@ function help() {
     <ol class="help-list"><li>WASDまたは矢印で移動し、ドラッグで視点を回します。スペースでジャンプします。</li>
     <li>下の持ち物から種を装備し、近くの土をクリックするか E を押します。作物を調べると、売値と変異を確認できます。</li>
     <li>「種屋」「わたしの畑」「売却所」でワープできます。売店の店員に近づいて E で取引します。</li>
-    <li>「算数教室」で正解すると、シェックルがもらえ、農園で遊べる時間が${playRewardSeconds}秒増えます。貯められる時間は最大${maxPlayMinutes}分です。算数を解いている間は持ち時間が減りません。</li></ol>
+    <li>「社会教室」で正解すると、シェックルがもらえ、農園で遊べる時間が${playRewardSeconds}秒増えます。貯められる時間は最大${maxPlayMinutes}分です。問題を解いている間は持ち時間が減りません。</li></ol>
     <p>農園はブラウザに保存され、閉じている間も作物が育ちます。種屋と道具屋は5分、卵屋は30分ごとに入荷します。</p>`);
 }
 
-function renderMath(focus) {
-  const { label, reward, symbol } = FarmMath.modes[problem.mode];
-  const { correct, earned } = state.math ?? { correct: 0, earned: 0 };
-  displayDialog(`<div class="math-heading"><span aria-hidden="true">✏️</span><div><h2 id="dialog-title">算数教室</h2>
-    <p>正解してシェックルを集めよう。</p></div></div>
-    <div class="math-modes" aria-label="計算の種類">${Object.entries(FarmMath.modes).map(([key, mode]) =>
-      `<button class="soft-button" data-action="math-mode" data-key="${key}" aria-pressed="${key === mathMode}">${mode.label}</button>`).join("")}</div>
-    <div class="math-problem"><small>${label} · 正解で ${reward} シェックルと遊べる時間${playRewardSeconds}秒</small>
-      <div class="equation">${problem.left} ${symbol} ${problem.right} ＝ ${problem.solved ? problem.answer : "？"}</div></div>
-    ${problem.solved
-      ? `<p class="math-feedback correct" role="status">正解！ ${reward} シェックル獲得。${FarmMath.playRemaining(state) === FarmMath.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p><div class="dialog-actions"><button class="primary-button math-next" data-action="math-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
-      : `<form id="math-form" novalidate><label class="math-answer">答え<input id="math-answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="6" aria-describedby="math-feedback"></label><button class="primary-button">答え合わせ</button></form>
-         <p id="math-feedback" class="math-feedback" role="status"></p>`}
-    <div class="math-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(FarmMath.playRemaining(state))}</b> / ${maxPlayMinutes}分</span></div>`);
-  if (focus) dialog.querySelector(focus)?.focus();
+function escapeText(value) {
+  const node = document.createElement("span");
+  node.textContent = value;
+  return node.innerHTML;
 }
 
-function showMath() {
+function renderStudy() {
+  const { correct, earned } = state.social ?? { correct: 0, earned: 0 };
+  const remaining = Study.playRemaining(state);
+  displayDialog(`<div class="study-heading"><span aria-hidden="true">📚</span><div><h2 id="dialog-title">社会教室</h2>
+    <p>${escapeText(Study.title)}</p></div></div>
+    <div class="study-problem"><small>${problem.index + 1} / ${Study.totalQuestions} 問</small>
+      <p id="study-prompt" tabindex="-1">${escapeText(problem.prompt)}</p>
+      ${problem.detail ? `<p class="study-material">${escapeText(problem.detail)}</p>` : ""}</div>
+    ${problem.solved
+      ? `<div class="study-result" role="status"><strong>正解　${escapeText(problem.answer)}</strong><p>${escapeText(problem.explanation)}</p>
+          <p class="study-reward">${Study.sheckleReward} シェックル獲得。${remaining === Study.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p></div>
+        <div class="dialog-actions"><button class="primary-button" data-action="study-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
+      : `<form id="study-form" novalidate><label class="study-answer">答え<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="120" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>
+         <p id="study-feedback" class="study-feedback" role="status"></p>`}
+    <div class="study-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(remaining)}</b> / ${maxPlayMinutes}分</span></div>`);
+  const focus = problem.solved ? '[data-action="study-next"]' : "#study-prompt";
+  dialog.querySelector(focus)?.focus();
+}
+
+function showStudy() {
   accountPlayTime(false);
   dialogPlot = null;
-  problem ??= FarmMath.question(mathMode);
-  renderMath(problem.solved ? '[data-action="math-next"]' : "#math-answer");
+  const current = Study.question(state);
+  if (!problem || problem.sequence + Number(problem.solved) !== current.sequence) problem = current;
+  renderStudy();
 }
 
 document.addEventListener("submit", event => {
-  if (event.target.id !== "math-form") return;
+  if (event.target.id !== "study-form") return;
   event.preventDefault();
   accountPlayTime(false);
   const now = Date.now();
   Garden.advance(state, now);
-  const input = byId("math-answer");
-  const result = FarmMath.check(state, problem, input.value);
-  if (result === "correct") {
+  const input = byId("study-answer");
+  const result = Study.check(state, problem, input.value);
+  if (result.status === "correct") {
     save();
     renderPlayTime();
     render(now);
-    renderMath('[data-action="math-next"]');
-  } else if (result !== "solved") {
-    byId("math-feedback").textContent = result === "invalid" ? "答えを数字で入力してね。" : `もう一度考えてみよう。 ${FarmMath.modes[problem.mode].tip}`;
+    renderStudy();
+  } else if (result.status === "solved") {
+    problem = Study.question(state);
+    renderStudy();
+  } else {
+    byId("study-feedback").textContent = result.status === "empty" ? "答えを入力してね。" : `もう一度考えてみよう。ヒント　${result.hint}`;
     input.focus();
     input.select();
   }
@@ -333,23 +346,17 @@ document.addEventListener("click", event => {
   const { action, key } = button.dataset;
   const now = Date.now();
   accountPlayTime();
-  if (!canPlay() && !["open-math", "math-mode", "math-next", "close"].includes(action)) return;
+  if (!canPlay() && !["open-study", "study-next", "close"].includes(action)) return;
   Garden.advance(state, now);
   let changed = false;
 
   switch (action) {
-    case "open-math": showMath(); return;
+    case "open-study": showStudy(); return;
     case "help": help(); break;
-    case "math-mode":
-      if (key === mathMode) break;
-      mathMode = key;
-      problem = FarmMath.question(mathMode, problem);
-      renderMath("#math-answer");
-      return;
-    case "math-next":
+    case "study-next":
       if (!problem?.solved) break;
-      problem = FarmMath.question(mathMode, problem);
-      renderMath("#math-answer");
+      problem = Study.question(state);
+      renderStudy();
       return;
     case "close": dialog.close(); break;
     case "tab": tab = key; break;
@@ -444,7 +451,7 @@ document.addEventListener("click", event => {
   render(now);
 });
 
-const initialRemaining = FarmMath.playRemaining(state);
+const initialRemaining = Study.playRemaining(state);
 if (savedText === undefined || state.playMs !== initialRemaining) {
   state.playMs = initialRemaining;
   save();
@@ -489,5 +496,5 @@ window.gardenWorld = {
     document.querySelector(`[data-action="tab"][data-key="${kind}"]`)?.click();
   },
   help,
-  showMath,
+  showStudy,
 };

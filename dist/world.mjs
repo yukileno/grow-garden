@@ -1,4 +1,5 @@
 import * as THREE from "./three.module.min.js";
+import "./app.js";
 
 const world = document.getElementById("world");
 const game = window.gardenWorld;
@@ -17,7 +18,7 @@ try {
     if (action === "sell") showPanel("sell");
     if (action === "close") panel.hidden = true;
     if (action === "help") game.help();
-    if (action === "math") game.showMath();
+    if (action === "study") game.showStudy();
   });
 }
 
@@ -221,7 +222,7 @@ function start() {
   }
   const seeds = booth(-14, -14, "種屋", "seeds", "#2f87ce", "#4e89c8");
   const sell = booth(14, -14, "売却所", "sell", "#d56b38", "#d56b38");
-  const classroom = booth(0, -28, "算数教室", "math", "#9154ad", "#a16fba");
+  const classroom = booth(0, -28, "社会教室", "study", "#9154ad", "#a16fba");
   booth(-30, -15, "道具屋", "gear", "#7447a1", "#986dba");
   booth(30, -15, "卵屋", "eggs", "#d59339", "#e7b64e");
   for (let i = 0; i < 13; i++) {
@@ -267,7 +268,7 @@ function start() {
   const number = new Intl.NumberFormat("ja-JP");
   const targetPoint = new THREE.Vector3();
   const cameraPoint = new THREE.Vector3();
-  const destinations = { seeds, sell, math: classroom, garden: { x: -14, z: 8.1 } };
+  const destinations = { seeds, sell, study: classroom, garden: { x: -14, z: 8.1 } };
   const colors = {
     carrot: "#f07128", strawberry: "#e13845", blueberry: "#544cc7", tomato: "#e24a2d",
     watermelon: "#358b42", grape: "#853fbe", mango: "#f2ae32", sunflower: "#ffce3c",
@@ -367,7 +368,7 @@ function start() {
     if (!game.canPlay() || !target || !panel.hidden || document.getElementById("dialog").open) return;
     if (target.type === "plot") game.plot(target.index);
     else if (target.type === "sell") showPanel("sell");
-    else if (target.type === "math") game.showMath();
+    else if (target.type === "study") game.showStudy();
     else {
       game.shop(target.type);
       showPanel("market");
@@ -436,7 +437,7 @@ function start() {
     if (action === "bag") showPanel("bag");
     if (action === "basket") showPanel("basket");
     if (action === "help") game.help();
-    if (action === "math") { warp("math"); game.showMath(); }
+    if (action === "study") { warp("study"); game.showStudy(); }
     if (button === interact) activate(nearby);
   });
 

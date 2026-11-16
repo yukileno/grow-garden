@@ -73,24 +73,27 @@ body { overflow: hidden; background: #86c9f3; }
 #interface[data-view=bag] [data-action=harvest-all] { display: none; }
 .toast { bottom: auto; top: 70px; }
 .world-error { position: fixed; z-index: 1; left: 50%; top: 35%; transform: translateX(-50%); color: #183e2b; background: #f7f7e8; border-radius: 10px; padding: 18px; width: min(90%, 420px); }
-.math-heading { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
-.math-heading > span { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 10px; background: #eee1f6; font-size: 24px; }
-.math-heading h2 { margin: 0; }
-.math-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
-.math-modes button { padding-inline: 2px; }
-.math-modes button[aria-pressed=true] { background: #5b3e74; border-color: #5b3e74; color: white; }
-.math-problem { margin: 13px 0; padding: 11px 8px; text-align: center; background: #f1ebf7; border: 1px solid #e7ddef; border-radius: 10px; color: #3f2952; }
-.math-problem small { font-size: 11px; font-weight: 750; }
-.equation { margin-top: 5px; font: 900 clamp(24px, 7vw, 39px)/1.25 Nunito, sans-serif; }
-#math-form { display: flex; align-items: end; gap: 8px; }
-.math-answer { display: grid; flex: 1; min-width: 0; gap: 3px; font-size: 12px; font-weight: 750; }
-.math-answer input { width: 100%; min-height: 40px; border: 1px solid #aba4b6; border-radius: 8px; background: white; color: #29242d; padding: 4px 10px; font: inherit; font-size: 19px; }
-.math-answer input:focus { outline: 2px solid #74518f; outline-offset: 1px; }
-#math-form button, .math-next { min-height: 40px; }
-dialog .math-feedback { margin-top: 7px; color: #765131; }
-.math-feedback:empty { display: none; }
-dialog .math-feedback.correct { color: #37673a; font-weight: 800; margin-bottom: 8px; }
-.math-record { display: flex; flex-wrap: wrap; gap: 5px 16px; border-top: 1px solid var(--line); margin-top: 13px; padding-top: 9px; color: var(--muted); font-size: 12px; }
+.study-heading { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; padding-right: 35px; }
+.study-heading > span { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 10px; background: #eee1f6; font-size: 23px; }
+.study-heading h2 { margin: 0; }
+.study-problem { margin: 12px 0; padding: 12px; background: #f1ebf7; border: 1px solid #e7ddef; border-radius: 10px; color: #3f2952; }
+.study-problem small { font-size: 12px; font-weight: 750; }
+.study-problem #study-prompt { margin-top: 4px; color: inherit; font-size: 16px; font-weight: 750; outline: none; }
+.study-problem .study-material { margin-top: 7px; padding-top: 7px; border-top: 1px solid #ddcfe8; color: #4f3d5d; }
+#study-form { display: flex; align-items: end; gap: 8px; }
+.study-answer { display: grid; flex: 1; min-width: 0; gap: 3px; font-size: 12px; font-weight: 750; }
+.study-answer input { width: 100%; min-height: 44px; border: 1px solid #aba4b6; border-radius: 8px; background: white; color: #29242d; padding: 4px 9px; font: inherit; font-size: 16px; }
+.study-answer input:focus { outline: 2px solid #74518f; outline-offset: 1px; }
+#study-form button, dialog:has(.study-heading) .dialog-actions button { min-height: 44px; }
+dialog .study-feedback { margin-top: 7px; color: #765131; }
+.study-feedback:empty { display: none; }
+.study-result { padding: 9px 11px; background: #eef5e6; border-radius: 8px; }
+.study-result strong, .study-result .study-reward { color: #37673a; font-weight: 800; }
+.study-result p { margin-top: 3px; }
+.study-record { display: flex; flex-wrap: wrap; gap: 5px 12px; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; color: var(--muted); font-size: 12px; }
+@media (max-width: 480px) {
+  dialog:has(.study-heading) { padding: 16px; }
+}
 @media (pointer: coarse), (max-width: 700px) {
   .touch-controls { display: grid; }
   .world-controls span { display: none; }

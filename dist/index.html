@@ -4,21 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f7ed">
-  <meta name="description" content="算数の問題に正解してシェックルを集め、3Dの農園で作物を育てよう。">
+  <meta name="description" content="社会の問題に正解してシェックルを集め、3Dの農園で作物を育てよう。">
   <title>こもれび農園</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="world.css">
   <script defer src="catalog.js"></script>
   <script defer src="garden.js"></script>
-  <script defer src="math.js"></script>
-  <script defer src="app.js"></script>
   <script type="module" src="world.mjs"></script>
 </head>
 <body>
   <div id="gameplay">
   <div id="world" aria-label="3D農園ワールド"></div>
   <nav class="travel" aria-label="ワープ">
-    <button data-travel="seeds">種屋</button><button data-travel="garden">わたしの畑</button><button data-travel="sell">売却所</button><button data-world="math">算数教室</button>
+    <button data-travel="seeds">種屋</button><button data-travel="garden">わたしの畑</button><button data-travel="sell">売却所</button><button data-world="study">社会教室</button>
   </nav>
   <aside class="world-info">
     <button class="world-button" data-world="market" aria-label="村のお店">🛒</button>
@@ -98,7 +96,7 @@
     <div class="play-lock-card">
       <h2 id="play-lock-title">農園の持ち時間がなくなりました</h2>
       <p id="play-lock-tip"></p>
-      <button class="primary-button" data-action="open-math">算数を解く</button>
+      <button class="primary-button" data-action="open-study">社会の問題を解く</button>
     </div>
   </section>
   <dialog id="dialog"></dialog>
