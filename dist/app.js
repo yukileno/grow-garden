@@ -292,7 +292,7 @@ function renderStudy() {
       ? `<div class="study-result" role="status"><strong>正解　${escapeText(problem.answer)}</strong><p>${escapeText(problem.explanation)}</p>
           <p class="study-reward">${Study.sheckleReward} シェックル獲得。${remaining === Study.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p></div>
         <div class="dialog-actions"><button class="primary-button" data-action="study-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
-      : `<form id="study-form" novalidate><label class="study-answer">答え<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="120" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>
+      : `<form id="study-form" novalidate><label class="study-answer">答えを入力<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="400" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>
          <p id="study-feedback" class="study-feedback" role="status"></p>`}
     <div class="study-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(remaining)}</b> / ${maxPlayMinutes}分</span></div>`);
   const focus = problem.solved ? '[data-action="study-next"]' : "#study-prompt";
