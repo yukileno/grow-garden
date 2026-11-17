@@ -289,7 +289,7 @@ function renderStudy() {
       <p id="study-prompt" tabindex="-1">${escapeText(problem.prompt)}</p>
       ${problem.detail ? `<p class="study-material">${escapeText(problem.detail)}</p>` : ""}</div>
     ${problem.solved
-      ? `<div class="study-result" role="status"><strong>正解　${escapeText(problem.answer)}</strong><p>${escapeText(problem.explanation)}</p>
+      ? `<div class="study-result" role="status"><strong>正解　${escapeText(problem.answer)}</strong>${problem.explanation ? `<p>${escapeText(problem.explanation)}</p>` : ""}
           <p class="study-reward">${Study.sheckleReward} シェックル獲得。${remaining === Study.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p></div>
         <div class="dialog-actions"><button class="primary-button" data-action="study-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
       : `<form id="study-form" novalidate><label class="study-answer">答えを入力<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="400" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>

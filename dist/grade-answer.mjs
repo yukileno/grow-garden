@@ -14,8 +14,10 @@ export function gradeAnswer(question, input) {
   const correct = question.acceptedAnswers.some(
     (answer) => normalizeAnswer(answer) === normalized,
   );
-  const matchesKeywords = question.keywordGroups?.length > 0 && question.keywordGroups.every(
-    (group) => group.some((word) => normalized.includes(normalizeAnswer(word))),
+  const matchesKeywords = question.alternativeKeywordGroups?.some((groups) =>
+    groups.every((group) =>
+      group.some((word) => normalized.includes(normalizeAnswer(word))),
+    ),
   );
   return correct || matchesKeywords ? { status: "correct" } : { status: "incorrect", hint: question.hint };
 }
