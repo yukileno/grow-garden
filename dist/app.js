@@ -280,6 +280,29 @@ function escapeText(value) {
   return node.innerHTML;
 }
 
+function renderStudyVisual({ chart, diagram }) {
+  if (chart) {
+    const rows = chart.rows.map(([label, value]) => `
+      <li class="study-chart-row">
+        <span>${escapeText(label)}</span>
+        <span class="study-chart-track" aria-hidden="true"><span style="width:${100 * value / chart.max}%"></span></span>
+        <strong>${escapeText(String(value) + chart.unit)}</strong>
+      </li>`).join("");
+    return `<figure class="study-visual">
+      <figcaption>${escapeText(chart.title)}</figcaption>
+      <ul class="study-chart">${rows}</ul>
+    </figure>`;
+  }
+  if (diagram) {
+    const paths = diagram.paths ?? [diagram.steps];
+    return `<figure class="study-visual">
+      <figcaption>${escapeText(diagram.title)}</figcaption>
+      ${paths.map(steps => `<ol class="study-flow">${steps.map(step => `<li>${escapeText(step)}</li>`).join("")}</ol>`).join("")}
+    </figure>`;
+  }
+  return "";
+}
+
 function renderStudy() {
   const { correct, earned } = state.social ?? { correct: 0, earned: 0 };
   const remaining = Study.playRemaining(state);
@@ -287,6 +310,7 @@ function renderStudy() {
     <p>${escapeText(Study.title)}</p></div></div>
     <div class="study-problem"><small>${problem.index + 1} / ${Study.totalQuestions} 問</small>
       <p id="study-prompt" tabindex="-1">${escapeText(problem.prompt)}</p>
+      ${renderStudyVisual(problem)}
       ${problem.detail ? `<p class="study-material">${escapeText(problem.detail)}</p>` : ""}</div>
     ${problem.solved
       ? `<div class="study-result" role="status"><strong>正解　${escapeText(problem.answer)}</strong>${problem.explanation ? `<p>${escapeText(problem.explanation)}</p>` : ""}

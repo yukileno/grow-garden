@@ -80,6 +80,18 @@ body { overflow: hidden; background: #86c9f3; }
 .study-problem small { font-size: 12px; font-weight: 750; }
 .study-problem #study-prompt { margin-top: 4px; color: inherit; font-size: 16px; font-weight: 750; outline: none; }
 .study-problem .study-material { margin-top: 7px; padding-top: 7px; border-top: 1px solid #ddcfe8; color: #4f3d5d; }
+.study-visual { margin: 10px 0 0; padding: 12px; border: 1px solid #ddcfe8; border-radius: 10px; background: #fff; }
+.study-visual figcaption { margin-bottom: 10px; font-size: 14px; font-weight: 750; }
+.study-chart, .study-flow { margin: 0; padding: 0; list-style: none; }
+.study-chart { display: grid; gap: 8px; }
+.study-chart-row { display: grid; grid-template-columns: minmax(5em, 1.2fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; font-size: 12px; }
+.study-chart-track { display: block; height: 12px; overflow: hidden; border-radius: 4px; background: #e9e1f3; }
+.study-chart-track > span { display: block; height: 100%; border-radius: inherit; background: #7450a1; }
+.study-chart-row strong { font-variant-numeric: tabular-nums; }
+.study-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.study-flow + .study-flow { margin-top: 8px; }
+.study-flow li { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 5px; background: #eee6f6; }
+.study-flow li + li::before { content: "→" / ""; color: #67428e; }
 #study-form { display: flex; align-items: end; gap: 8px; }
 .study-answer { display: grid; flex: 1; min-width: 0; gap: 3px; font-size: 12px; font-weight: 750; }
 .study-answer input { width: 100%; min-height: 44px; border: 1px solid #aba4b6; border-radius: 8px; background: white; color: #29242d; padding: 4px 9px; font: inherit; font-size: 16px; }
