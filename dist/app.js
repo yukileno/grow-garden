@@ -295,7 +295,7 @@ function renderStudy() {
       : `<form id="study-form" novalidate><label class="study-answer">答えを入力<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="400" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>
          <p id="study-feedback" class="study-feedback" role="status"></p>`}
     <div class="study-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(remaining)}</b> / ${maxPlayMinutes}分</span></div>`);
-  const focus = problem.solved ? '[data-action="study-next"]' : "#study-prompt";
+  const focus = problem.solved ? '[data-action="study-next"]' : "#study-answer";
   dialog.querySelector(focus)?.focus();
 }
 
