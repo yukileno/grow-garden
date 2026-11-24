@@ -312,22 +312,46 @@ function renderStudy() {
       <p id="study-prompt" tabindex="-1">${escapeText(problem.prompt)}</p>
       ${renderStudyVisual(problem)}
       ${problem.detail ? `<p class="study-material">${escapeText(problem.detail)}</p>` : ""}</div>
-    ${problem.solved
-      ? `<div class="study-result" role="status"><strong>正解　${escapeText(problem.answer)}</strong>${problem.explanation ? `<p>${escapeText(problem.explanation)}</p>` : ""}
-          <p class="study-reward">${Study.sheckleReward} シェックル獲得。${remaining === Study.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p></div>
+    ${problem.outcome
+      ? `<div class="study-result" role="status"><strong>${problem.outcome === "correct" ? "正解" : "時間切れ。答えは"}　${escapeText(problem.answer)}</strong>${problem.explanation ? `<p>${escapeText(problem.explanation)}</p>` : ""}
+          ${problem.outcome === "correct" ? `<p class="study-reward">${Study.sheckleReward} シェックル獲得。${remaining === Study.maxPlayTime ? `遊べる時間は上限の${maxPlayMinutes}分です。` : `遊べる時間が${playRewardSeconds}秒増えました。`}</p>` : ""}</div>
         <div class="dialog-actions"><button class="primary-button" data-action="study-next">次の問題</button><button class="soft-button" data-action="close">農園に戻る</button></div>`
-      : `<form id="study-form" novalidate><label class="study-answer">答えを入力<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="400" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>
+      : `<p id="study-countdown" aria-live="off">答えの表示まで ${Math.ceil(Study.answerDelay / 1000)}秒</p><form id="study-form" novalidate><label class="study-answer">答えを入力<input id="study-answer" name="answer" type="text" autocomplete="off" autocapitalize="off" maxlength="400" aria-describedby="study-prompt study-feedback"></label><button class="primary-button">答え合わせ</button></form>
          <p id="study-feedback" class="study-feedback" role="status"></p>`}
     <div class="study-record"><span>正解 <b>${format(correct)}問</b></span><span>獲得 <b>${format(earned)} シェックル</b></span><span>遊べる時間 <b>${clock(remaining)}</b> / ${maxPlayMinutes}分</span></div>`);
-  const focus = problem.solved ? '[data-action="study-next"]' : "#study-answer";
+  updateStudyCountdown();
+  const focus = problem.outcome ? '[data-action="study-next"]' : "#study-answer";
   dialog.querySelector(focus)?.focus();
+}
+
+function updateStudyCountdown() {
+  const countdown = byId("study-countdown");
+  if (!countdown) return;
+  const seconds = Math.max(0, Math.ceil((problem.deadline - performance.now()) / 1000));
+  const text = `答えの表示まで ${seconds}秒`;
+  if (countdown.textContent !== text) countdown.textContent = text;
+}
+
+function updateStudyTimer() {
+  if (!studying() || !problem) return;
+  if (problem.sequence + Number(Boolean(problem.outcome)) !== Study.progress(state)) {
+    problem = Study.question(state);
+    renderStudy();
+  } else if (Study.reveal(state, problem)) {
+    save();
+    renderStudy();
+  } else {
+    updateStudyCountdown();
+  }
 }
 
 function showStudy() {
   accountPlayTime(false);
   dialogPlot = null;
-  const current = Study.question(state);
-  if (!problem || problem.sequence + Number(problem.solved) !== current.sequence) problem = current;
+  if (!problem || problem.sequence + Number(Boolean(problem.outcome)) !== Study.progress(state)) {
+    problem = Study.question(state);
+  }
+  if (Study.reveal(state, problem)) save();
   renderStudy();
 }
 
@@ -344,7 +368,10 @@ document.addEventListener("submit", event => {
     renderPlayTime();
     render(now);
     renderStudy();
-  } else if (result.status === "solved") {
+  } else if (result.status === "revealed") {
+    save();
+    renderStudy();
+  } else if (result.status === "stale") {
     problem = Study.question(state);
     renderStudy();
   } else {
@@ -378,7 +405,7 @@ document.addEventListener("click", event => {
     case "open-study": showStudy(); return;
     case "help": help(); break;
     case "study-next":
-      if (!problem?.solved) break;
+      if (!problem?.outcome) break;
       problem = Study.question(state);
       renderStudy();
       return;
@@ -493,12 +520,17 @@ function tick() {
 }
 
 setInterval(tick, 500);
-document.addEventListener("visibilitychange", () => accountPlayTime());
+setInterval(updateStudyTimer, 200);
+document.addEventListener("visibilitychange", () => {
+  accountPlayTime();
+  updateStudyTimer();
+});
 window.addEventListener("pagehide", () => accountPlayTime(false));
 window.addEventListener("storage", event => {
   if (event.key !== storageKey) return;
   sync();
   renderPlayTime();
+  updateStudyTimer();
 });
 
 window.gardenWorld = {
