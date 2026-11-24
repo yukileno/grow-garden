@@ -306,8 +306,7 @@ function renderStudyVisual({ chart, diagram }) {
 function renderStudy() {
   const { correct, earned } = state.social ?? { correct: 0, earned: 0 };
   const remaining = Study.playRemaining(state);
-  displayDialog(`<div class="study-heading"><span aria-hidden="true">📚</span><div><h2 id="dialog-title">社会教室</h2>
-    <p>${escapeText(Study.title)}</p></div></div>
+  displayDialog(`<div class="study-heading"><span aria-hidden="true">📚</span><h2 id="dialog-title">社会教室</h2></div>
     <div class="study-problem"><small>${problem.index + 1} / ${Study.totalQuestions} 問</small>
       <p id="study-prompt" tabindex="-1">${escapeText(problem.prompt)}</p>
       ${renderStudyVisual(problem)}
