@@ -410,22 +410,37 @@ function start() {
 
   const aliases = { arrowup: "w", arrowleft: "a", arrowdown: "s", arrowright: "d", " ": "jump" };
   const movement = ["w", "a", "s", "d", "jump", "shift"];
+  let studyShortcutHeld = false;
   window.addEventListener("keydown", event => {
+    const key = aliases[event.key.toLowerCase()] ?? event.key.toLowerCase();
+    if (key === "e" && event.repeat && studyShortcutHeld) {
+      event.preventDefault();
+      return;
+    }
     if (!game.canPlay()) return;
     const dialog = document.getElementById("dialog");
     if (event.key === "Escape" && !panel.hidden && !dialog.open) panel.hidden = true;
     if (event.key === "Escape" && panel.hidden && !dialog.open) game.cancelTransplant();
     if (dialog.open || !panel.hidden || event.ctrlKey || event.metaKey || event.altKey) return;
-    const key = aliases[event.key.toLowerCase()] ?? event.key.toLowerCase();
     if (movement.includes(key)) {
       if (key === "jump" && event.target instanceof HTMLButtonElement) return;
       event.preventDefault();
       keys.add(key);
-    } else if (!event.repeat && key === "e") activate(nearby);
-    else if (slotKeys[Number(key) - 1]) game.select(slotKeys[Number(key) - 1]);
+    } else if (!event.repeat && key === "e") {
+      event.preventDefault();
+      studyShortcutHeld = nearby?.type === "study";
+      activate(nearby);
+    } else if (slotKeys[Number(key) - 1]) game.select(slotKeys[Number(key) - 1]);
   });
-  window.addEventListener("keyup", event => keys.delete(aliases[event.key.toLowerCase()] ?? event.key.toLowerCase()));
-  window.addEventListener("blur", () => keys.clear());
+  window.addEventListener("keyup", event => {
+    const key = event.key.toLowerCase();
+    if (key === "e") studyShortcutHeld = false;
+    keys.delete(aliases[key] ?? key);
+  });
+  window.addEventListener("blur", () => {
+    studyShortcutHeld = false;
+    keys.clear();
+  });
   document.addEventListener("click", event => {
     const button = event.target.closest("button");
     if (!button) return;
