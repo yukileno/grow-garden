@@ -267,7 +267,7 @@ function renderInspection(index) {
 function help() {
   dialogPlot = null;
   displayDialog(`<div class="dialog-icon" aria-hidden="true">🌱</div><h2 id="dialog-title">遊び方</h2>
-    <ol class="help-list"><li>WASDまたは矢印で移動し、ドラッグで視点を回します。スペースでジャンプします。</li>
+    <ol class="help-list"><li>WASDまたは矢印で移動します。タッチパッドを2本指で上下左右になぞるか、画面をドラッグすると視点が回ります。Shiftを押しながらスクロールするとズームします。スペースでジャンプします。</li>
     <li>下の持ち物から種を装備し、近くの土をクリックするか E を押します。作物を調べると、売値と変異を確認できます。</li>
     <li>「種屋」「わたしの畑」「売却所」でワープできます。売店の店員に近づいて E で取引します。</li>
     <li>「社会教室」で正解すると、シェックルがもらえ、農園で遊べる時間が${playRewardSeconds}秒増えます。貯められる時間は最大${maxPlayMinutes}分です。問題を解いている間は持ち時間が減りません。</li></ol>

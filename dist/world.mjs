@@ -450,6 +450,11 @@ function start() {
     });
     button.addEventListener("lostpointercapture", () => keys.delete(key));
   }
+  function rotateCamera(dx, dy) {
+    yaw -= dx * .006;
+    pitch = THREE.MathUtils.clamp(pitch + dy * .004, .12, 1.14);
+  }
+
   let drag = null;
   canvas.addEventListener("contextmenu", event => event.preventDefault());
   canvas.addEventListener("pointerdown", event => {
@@ -464,8 +469,7 @@ function start() {
     drag.x = event.clientX;
     drag.y = event.clientY;
     drag.moved += Math.abs(dx) + Math.abs(dy);
-    yaw -= dx * .006;
-    pitch = THREE.MathUtils.clamp(pitch + dy * .004, .12, 1.14);
+    rotateCamera(dx, dy);
   });
   canvas.addEventListener("pointerup", event => {
     if (drag?.id !== event.pointerId) return;
@@ -479,8 +483,17 @@ function start() {
   });
   canvas.addEventListener("lostpointercapture", () => { drag = null; });
   canvas.addEventListener("wheel", event => {
+    if (!game.canPlay() || !panel.hidden || document.getElementById("dialog").open || event.ctrlKey || event.metaKey) return;
     event.preventDefault();
-    zoom = THREE.MathUtils.clamp(zoom + event.deltaY * .011, 5, 24);
+
+    const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? canvas.clientHeight : 1;
+    if (event.shiftKey) {
+      // Some browsers route Shift + vertical scroll through deltaX.
+      zoom = THREE.MathUtils.clamp(zoom + (event.deltaY || event.deltaX) * unit * .011, 5, 24);
+    } else {
+      rotateCamera(event.deltaX * unit, event.deltaY * unit);
+    }
   }, { passive: false });
 
   const candidates = [...plots, ...fixtures];
