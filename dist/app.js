@@ -5,6 +5,7 @@ const number = new Intl.NumberFormat("ja-JP");
 const format = value => number.format(value);
 const byId = id => document.getElementById(id);
 const dialog = byId("dialog");
+const panel = byId("interface");
 const playRewardSeconds = Study.playReward / 1000;
 const maxPlayMinutes = Study.maxPlayTime / 60_000;
 byId("play-lock-tip").textContent = `社会の問題に1問正解すると、あと${playRewardSeconds}秒遊べます。`;
@@ -38,7 +39,7 @@ const readyBefore = state.plots.filter(plot => plot?.fruit).length;
 const lastPlayed = state.time;
 Garden.advance(state, started);
 let lastClock = performance.now();
-let countingPlay = !document.hidden;
+let countingPlay = shouldCountPlayTime();
 
 function canPlay() {
   return Study.playRemaining(state) > 0;
@@ -46,6 +47,10 @@ function canPlay() {
 
 function studying() {
   return dialog.open && dialog.querySelector(".study-heading") !== null;
+}
+
+function shouldCountPlayTime() {
+  return !document.hidden && !studying() && (panel.hidden || panel.dataset.view === "fallback");
 }
 
 function renderPlayTime() {
@@ -58,13 +63,13 @@ function renderPlayTime() {
   lock.hidden = remaining > 0;
   byId("gameplay").inert = !lock.hidden;
   if (!lock.hidden) {
-    byId("interface").hidden = true;
+    panel.hidden = true;
     if (dialog.open && !studying()) dialog.close();
     if (!dialog.open) lock.querySelector("button").focus();
   }
 }
 
-function accountPlayTime(resume = !document.hidden && !studying()) {
+function accountPlayTime(resume = shouldCountPlayTime()) {
   sync();
   const now = performance.now();
   if (countingPlay && canPlay()) {
@@ -535,6 +540,7 @@ window.addEventListener("storage", event => {
 window.gardenWorld = {
   get state() { return state; },
   canPlay,
+  accountPlayTime,
   get selected() { return selected; },
   get transplanting() { return transplantSource !== null; },
   cancelTransplant() { transplantSource = null; },

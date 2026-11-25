@@ -16,7 +16,7 @@ try {
     if (action === "market" || action === "seeds") showPanel("market");
     if (action === "garden") showPanel("fallback");
     if (action === "sell") showPanel("sell");
-    if (action === "close") panel.hidden = true;
+    if (action === "close") hidePanel();
     if (action === "help") game.help();
     if (action === "study") game.showStudy();
   });
@@ -25,7 +25,15 @@ try {
 function showPanel(view) {
   panel.dataset.view = view;
   panel.hidden = false;
+  game.accountPlayTime();
+  if (panel.hidden) return;
   panel.querySelector('[data-world="close"]').focus();
+}
+
+function hidePanel() {
+  if (panel.hidden) return;
+  panel.hidden = true;
+  game.accountPlayTime();
 }
 
 function start() {
@@ -382,7 +390,7 @@ function start() {
   function warp(key) {
     const target = destinations[key];
     if (!target) return;
-    panel.hidden = true;
+    hidePanel();
     document.activeElement?.blur();
     avatar.position.set(target.x, 0, target.z);
     avatar.rotation.y = Math.PI;
@@ -419,7 +427,7 @@ function start() {
     }
     if (!game.canPlay()) return;
     const dialog = document.getElementById("dialog");
-    if (event.key === "Escape" && !panel.hidden && !dialog.open) panel.hidden = true;
+    if (event.key === "Escape" && !panel.hidden && !dialog.open) hidePanel();
     if (event.key === "Escape" && panel.hidden && !dialog.open) game.cancelTransplant();
     if (dialog.open || !panel.hidden || event.ctrlKey || event.metaKey || event.altKey) return;
     if (movement.includes(key)) {
@@ -448,7 +456,7 @@ function start() {
     if (travel) warp(travel);
     if (seed) game.select(seed);
     if (action === "market") { warp("seeds"); game.shop("seeds"); showPanel("market"); }
-    if (action === "close") panel.hidden = true;
+    if (action === "close") hidePanel();
     if (action === "bag") showPanel("bag");
     if (action === "basket") showPanel("basket");
     if (action === "help") game.help();
