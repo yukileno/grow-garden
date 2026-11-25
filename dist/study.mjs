@@ -19,7 +19,7 @@ export function spendPlayTime(state, elapsed) {
 }
 
 export function progress(state) {
-  return state.social?.page4Seen ?? 0;
+  return state.social?.termReviewSeen ?? 0;
 }
 
 export function question(state, now = performance.now()) {
@@ -35,7 +35,7 @@ function current(state, problem) {
 
 function finish(state, problem, outcome) {
   state.social ??= { correct: 0, earned: 0 };
-  state.social.page4Seen = problem.sequence + 1;
+  state.social.termReviewSeen = problem.sequence + 1;
   problem.outcome = outcome;
 }
 
