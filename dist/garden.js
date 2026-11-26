@@ -50,16 +50,23 @@ const Garden = ((catalog) => {
     meadow: { name: "草原の卵", icon: "🥚", cost: 380, stock: 3, chance: 1, seconds: 100, pets: ["bee","bear"] },
     forest: { name: "森の卵", icon: "🐣", cost: 1800, stock: 2, chance: 0.45, seconds: 210, pets: ["dragonfly","tanuki"] },
   };
-  const pets = {
-    bee: { name: "ミツバチ", icon: "🐝", description: "受粉を付与" },
-    bear: { name: "シロクマ", icon: "🐻‍❄️", description: "冷却を付与" },
-    dragonfly: { name: "トンボ", icon: "🦋", description: "ゴールドを付与" },
-    tanuki: { name: "タヌキ", icon: "🦝", description: "ランダムな変異を付与" },
-  };
   const mutations = {
     Wet: ["濡れ", 2], Chilled: ["冷却", 2], Frozen: ["凍結", 10],
     Shocked: ["感電", 100], Celestial: ["天体", 120], Pollinated: ["受粉", 3],
   };
+  const goldMultiplier = 20;
+  const petInterval = 90_000;
+  const pets = {
+    bee: { name: "ミツバチ", icon: "🐝", effects: ["Pollinated"] },
+    bear: { name: "シロクマ", icon: "🐻‍❄️", effects: ["Chilled"] },
+    dragonfly: { name: "トンボ", icon: "🦋", effects: ["Gold"] },
+    tanuki: { name: "タヌキ", icon: "🦝", effects: ["Wet", "Chilled", "Pollinated", "Shocked"] },
+  };
+  function petEffectLabel(effect) {
+    const [name, multiplier] = effect === "Gold" ? ["ゴールド", goldMultiplier] : mutations[effect];
+    return `${name}（売値×${multiplier}）`;
+  }
+
   const skies = {
     sun: { name: "晴れ", icon: "☀️", detail: "穏やかな天気", speed: 1 },
     rain: { name: "雨", icon: "🌧️", detail: "成長速度2倍・濡れ", speed: 2, mutation: "Wet", chance: 0.70 },
@@ -176,7 +183,7 @@ const Garden = ((catalog) => {
 
   function value(fruit) {
     const crop = crops[fruit.key];
-    const variant = fruit.variant === "Rainbow" ? 50 : fruit.variant === "Gold" ? 20 : 1;
+    const variant = fruit.variant === "Rainbow" ? 50 : fruit.variant === "Gold" ? goldMultiplier : 1;
     const environment = fruit.mods.reduce((sum, key) => sum + mutations[key][1] - 1, 1);
     return Math.max(1, Math.round(crop.base * (fruit.weight / crop.weight) ** 2 * variant * environment));
   }
@@ -203,15 +210,13 @@ const Garden = ((catalog) => {
     }
   }
 
-  const petInterval = 90_000;
   function petEffect(state, tick) {
     const available = state.plots.filter(plot => plot?.fruit);
     if (!state.activePet || !available.length) return;
     const seed = `${state.salt}/pet/${tick}`;
     const plot = available[Math.floor(random(seed) * available.length)];
-    const types = { bee: "Pollinated", bear: "Chilled", dragonfly: "Gold" };
-    const mix = ["Wet", "Chilled", "Pollinated", "Shocked"];
-    mutate(plot.fruit, types[state.activePet] ?? mix[Math.floor(random(seed + "/mix") * mix.length)]);
+    const effects = pets[state.activePet]?.effects ?? pets.tanuki.effects;
+    mutate(plot.fruit, effects[Math.floor(random(seed + "/mix") * effects.length)]);
   }
 
   function advance(state, now) {
@@ -308,7 +313,7 @@ const Garden = ((catalog) => {
     return pet;
   }
 
-  return { crops, gear, eggs, pets, mutations, weatherInterval, restockInterval, stock, buy,
+  return { crops, gear, eggs, pets, petInterval, petEffectLabel, mutations, weatherInterval, restockInterval, stock, buy,
     plotsPerFarm, validPlotCount, nextLand, buyLand, weather, value, plant, create, advance, harvest, transplant, sell, useGear, hatch, duration };
 })(typeof FarmCatalog === "undefined" ? require("./catalog.js") : FarmCatalog);
 

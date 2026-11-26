@@ -221,9 +221,16 @@ function renderEffects(now) {
       ? `<button class="seed-button" data-action="hatch" data-key="${egg.id}">${offer.icon} ${offer.name}を孵す</button>`
       : `<span class="effect">${offer.icon} ${offer.name} · ${clock(egg.ends - now)}</span>`);
   }
+  if (state.pets.length) {
+    lines.push(`<p class="pet-note">活動中のペットは${Garden.petInterval / 1000}秒ごとに、畑の実をランダムに1つ選びます。売値の倍率は、効果が単独で付いた場合です。</p>`);
+  }
   for (const key of new Set(state.pets)) {
     const pet = Garden.pets[key];
-    lines.push(`<button class="seed-button" data-action="pet" data-key="${key}" aria-pressed="${state.activePet === key}" title="${pet.description}">${pet.icon} ${pet.name}${state.activePet === key ? " · 活動中" : ""}</button>`);
+    const effects = pet.effects.map(Garden.petEffectLabel).join("、");
+    lines.push(`<button class="seed-button pet-button" data-action="pet" data-key="${key}" aria-pressed="${state.activePet === key}">
+      <strong>${pet.icon} ${pet.name}${state.activePet === key ? " · 活動中" : ""}</strong>
+      <span>${effects}${pet.effects.length > 1 ? "からランダムに1つ" : "を付ける"}</span>
+    </button>`);
   }
   byId("effects").hidden = lines.length === 0;
   fill("effects", lines.join(""));
