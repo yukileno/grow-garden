@@ -2,7 +2,7 @@ const Garden = ((catalog) => {
   const minute = 60_000;
   const weatherInterval = 3 * minute;
   const plotsPerFarm = 12;
-  const landPrices = Object.freeze([1000, 2500, 5000]);
+  const landPrices = Object.freeze([100_000, 250_000, 500_000]);
 
   function validPlotCount(count) {
     return Number.isInteger(count) && count >= plotsPerFarm &&
