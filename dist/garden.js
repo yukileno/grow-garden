@@ -1,7 +1,31 @@
 const Garden = ((catalog) => {
   const minute = 60_000;
   const weatherInterval = 3 * minute;
-  const plotsTotal = 12;
+  const plotsPerFarm = 12;
+  const landPrices = Object.freeze([1000, 2500, 5000]);
+
+  function validPlotCount(count) {
+    return Number.isInteger(count) && count >= plotsPerFarm &&
+      count <= plotsPerFarm * (1 + landPrices.length) && count % plotsPerFarm === 0;
+  }
+
+  function nextLand(state) {
+    const index = state.plots.length / plotsPerFarm - 1;
+    const cost = landPrices[index];
+    return cost === undefined ? null : { index, cost };
+  }
+
+  function buyLand(state, index) {
+    const offer = nextLand(state);
+    if (!offer || offer.index !== index || state.money < offer.cost) return false;
+    state.money -= offer.cost;
+    state.plots.push(...Array(plotsPerFarm).fill(null));
+    return true;
+  }
+
+  function ownsPlot(state, index) {
+    return Number.isInteger(Number(index)) && Object.hasOwn(state.plots, index);
+  }
   const originalCrops = {
     carrot: { name: "ニンジン", icon: "🥕", tier: "コモン", cost: 10, base: 22, weight: 0.28, seconds: 18, stock: 12, chance: 1 },
     strawberry: { name: "イチゴ", icon: "🍓", tier: "コモン", cost: 50, base: 36, weight: 0.14, seconds: 42, repeat: 30, stock: 6, chance: 1 },
@@ -99,7 +123,7 @@ const Garden = ((catalog) => {
   }
 
   function plant(state, index, key) {
-    if (!Object.hasOwn(crops, key) || !state.seeds[key] || state.plots[index]) return false;
+    if (!ownsPlot(state, index) || !Object.hasOwn(crops, key) || !state.seeds[key] || state.plots[index]) return false;
     state.seeds[key]--;
     state.plots[index] = {
       key, id: state.serial++, generation: 0, progress: 0,
@@ -112,7 +136,7 @@ const Garden = ((catalog) => {
     const state = {
       version: 1, time: now, salt: Math.random().toString(36).slice(2), serial: 1, money: 150,
       seeds: { carrot: 3, strawberry: 1 }, gear: {}, purchases: {}, basket: [],
-      plots: Array(plotsTotal).fill(null), boost: null, rod: 0, incubating: [], pets: [], activePet: null,
+      plots: Array(plotsPerFarm).fill(null), boost: null, rod: 0, incubating: [], pets: [], activePet: null,
     };
     return state;
   }
@@ -235,7 +259,7 @@ const Garden = ((catalog) => {
 
   function transplant(state, source, target) {
     const plot = state.plots[source];
-    if (!plot || plot.locked || state.plots[target] || !state.gear.trowel) return false;
+    if (!ownsPlot(state, target) || !plot || plot.locked || state.plots[target] || !state.gear.trowel) return false;
     state.plots[target] = plot;
     state.plots[source] = null;
     state.gear.trowel--;
@@ -285,7 +309,7 @@ const Garden = ((catalog) => {
   }
 
   return { crops, gear, eggs, pets, mutations, weatherInterval, restockInterval, stock, buy,
-    weather, value, plant, create, advance, harvest, transplant, sell, useGear, hatch, duration };
+    plotsPerFarm, validPlotCount, nextLand, buyLand, weather, value, plant, create, advance, harvest, transplant, sell, useGear, hatch, duration };
 })(typeof FarmCatalog === "undefined" ? require("./catalog.js") : FarmCatalog);
 
 if (typeof module !== "undefined") module.exports = Garden;

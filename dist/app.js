@@ -22,7 +22,7 @@ function restore() {
     const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     const save = JSON.parse(raw);
-    if (save.version === 1 && save.plots.length === 12 && Number.isFinite(save.time)) {
+    if (save.version === 1 && Array.isArray(save.plots) && Garden.validPlotCount(save.plots.length) && Number.isFinite(save.time)) {
       savedText = raw;
       return save;
     }
@@ -167,11 +167,24 @@ function renderPlots() {
 }
 
 function renderShop(now) {
-  const interval = Garden.restockInterval(tab);
-  byId("restock").textContent = clock(interval - (now % interval));
+  const buyingLand = tab === "land";
+  byId("restock-panel").hidden = buyingLand;
   for (const button of document.querySelectorAll('[data-action="tab"]')) {
     button.setAttribute("aria-pressed", button.dataset.key === tab);
   }
+  if (buyingLand) {
+    const offer = Garden.nextLand(state);
+    byId("market-title").textContent = "土地";
+    byId("shop-summary").textContent = `${state.plots.length} 区画を所有中`;
+    fill("shop", offer ? `<article class="shop-row">
+      <span class="item-icon" aria-hidden="true">🚜</span>
+      <div class="shop-info"><strong>追加の畑 ${offer.index + 1}</strong><small>すぐに ${Garden.plotsPerFarm} 区画増えます</small></div>
+      <button class="buy" data-action="buy-land" data-key="${offer.index}" aria-label="土地を ${format(offer.cost)} シェックルで購入" ${state.money < offer.cost ? "disabled" : ""}><span class="mini-coin" aria-hidden="true">◈</span> ${format(offer.cost)}</button>
+    </article>` : '<p class="muted">すべての土地を購入済みです。</p>');
+    return;
+  }
+  const interval = Garden.restockInterval(tab);
+  byId("restock").textContent = clock(interval - (now % interval));
   const offers = Garden.stock(tab, now, state);
   byId("market-title").textContent = { seeds: "種屋", gear: "道具屋", eggs: "卵屋" }[tab];
   byId("shop-summary").textContent = `全 ${offers.length} 種類 · 入荷中 ${offers.filter(offer => offer.left).length} 種類`;
@@ -431,6 +444,10 @@ document.addEventListener("click", event => {
         notice(changed ? `${Garden.crops[selected].name}の種を植えました` : "種屋で種を用意しましょう");
         chooseSeed();
       }
+      break;
+    case "buy-land":
+      changed = Garden.buyLand(state, Number(key));
+      notice(changed ? `畑が ${state.plots.length} 区画になりました` : "残高と土地の購入状況を確認してください");
       break;
     case "buy":
       changed = Garden.buy(state, tab, key, now);

@@ -76,6 +76,7 @@ function start() {
   const plots = [];
   const picks = [];
   const beds = [];
+  const farmSigns = [];
   const worldColors = { grass: "#64ac36", path: "#81bc47", soil: "#79502e", post: "#9c662f", rail: "#c28b47" };
   part(scene, "#664a34", 0, -1.44, -6, 100, 2.5, 91, false);
   part(scene, worldColors.grass, 0, -.19, -6, 100, .38, 91, false);
@@ -140,14 +141,20 @@ function start() {
     block(group.position.x, group.position.z, Math.abs(x2 - x1) || .22, Math.abs(z2 - z1) || .22);
   }
 
-  function farm(x, z, own) {
+  function farm(x, z, id) {
     beds.push({ x, z });
     fence(x - 9, z - 7.2, x + 9, z - 7.2);
     fence(x - 9, z - 7.2, x - 9, z + 7.2);
     fence(x + 9, z - 7.2, x + 9, z + 7.2);
     fence(x - 9, z + 7.2, x - 2, z + 7.2);
     fence(x + 2, z + 7.2, x + 9, z + 7.2);
-    sign(scene, own ? "わたしの畑" : "空き農園", x - 5, 1.87, z + 7.24, 5.25, 1.05, own ? "#4e8b33" : "#936637");
+    const ownedSign = new THREE.Group();
+    scene.add(ownedSign);
+    sign(ownedSign, id === 0 ? "わたしの畑" : `わたしの畑 ${id + 1}`, x - 5, 1.87, z + 7.24, 5.25, 1.05, "#4e8b33");
+    const vacantSign = new THREE.Group();
+    scene.add(vacantSign);
+    if (id > 0) sign(vacantSign, "空き農園", x - 5, 1.87, z + 7.24, 5.25, 1.05, "#936637");
+    farmSigns.push({ ownedSign, vacantSign, firstPlot: id * Garden.plotsPerFarm });
     for (let row = 0; row < 3; row++) {
       part(scene, "#9f6d38", x, .13, z - 4.4 + row * 4.35, 15.8, .26, 3.6);
       for (let col = 0; col < 4; col++) {
@@ -157,22 +164,20 @@ function start() {
         for (let ridge = -1; ridge <= 1; ridge++) {
           part(scene, "#8e6037", px, .435, pz + ridge * .79, 3.68, .06, .3, false);
         }
-        if (own) {
-          const crop = new THREE.Group();
-          scene.add(crop);
-          crop.position.set(px, .46, pz);
-          const target = { type: "plot", index: row * 4 + col, x: px, z: pz, crop, bed };
-          plots.push(target);
-          picks.push(bed);
-          bed.userData.target = target;
-        }
+        const crop = new THREE.Group();
+        scene.add(crop);
+        crop.position.set(px, .46, pz);
+        const target = { type: "plot", index: id * Garden.plotsPerFarm + row * 4 + col, x: px, z: pz, crop, bed };
+        plots.push(target);
+        picks.push(bed);
+        bed.userData.target = target;
       }
     }
   }
-  farm(-14, 0, true);
-  farm(14, 0, false);
-  farm(-14, 19, false);
-  farm(14, 19, false);
+  farm(-14, 0, 0);
+  farm(-14, 19, 1);
+  farm(14, 0, 2);
+  farm(14, 19, 3);
 
   function person(parent, x, z, outfit, hair, cap = false) {
     const avatar = new THREE.Group();
@@ -365,6 +370,10 @@ function start() {
     const current = Garden.weather(now);
     const restock = Math.ceil((300000 - now % 300000) / 1000);
     weather.innerHTML = `${current.icon} ${current.name}<br>入荷まで ${Math.floor(restock / 60)}:${String(restock % 60).padStart(2, "0")}`;
+    for (const { ownedSign, vacantSign, firstPlot } of farmSigns) {
+      ownedSign.visible = firstPlot < state.plots.length;
+      vacantSign.visible = !ownedSign.visible;
+    }
     for (const target of plots) repaintCrop(target, state.plots[target.index]);
     rain.visible = current.name === "雨" || current.name === "雷雨";
     scene.background.set(current.name === "雷雨" ? "#7a99b5" : current.name === "流星群" ? "#9299cc" : rain.visible ? "#9ebfd4" : "#85c7f2");
@@ -374,7 +383,9 @@ function start() {
 
   function activate(target) {
     if (!game.canPlay() || !target || !panel.hidden || document.getElementById("dialog").open) return;
-    if (target.type === "plot") game.plot(target.index);
+    if (target.type === "plot") {
+      if (target.index < game.state.plots.length) game.plot(target.index);
+    }
     else if (target.type === "sell") showPanel("sell");
     else if (target.type === "study") game.showStudy();
     else {
@@ -579,6 +590,7 @@ function start() {
     let best = 4.4;
     nearby = null;
     for (const target of candidates) {
+      if (target.type === "plot" && target.index >= game.state.plots.length) continue;
       const distance = range(target);
       if (distance < best) {
         best = distance;
