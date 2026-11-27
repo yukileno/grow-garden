@@ -356,10 +356,20 @@ function updateStudyCountdown() {
   if (countdown.textContent !== text) countdown.textContent = text;
 }
 
+function matchesStudyProgress() {
+  if (problem.outcome) return problem.sequence + 1 === Study.progress(state);
+  return Study.isCurrent(state, problem);
+}
+
+function nextStudyQuestion() {
+  if (Study.prepare(state)) save();
+  return Study.question(state);
+}
+
 function updateStudyTimer() {
   if (!studying() || !problem) return;
-  if (problem.sequence + Number(Boolean(problem.outcome)) !== Study.progress(state)) {
-    problem = Study.question(state);
+  if (!matchesStudyProgress()) {
+    problem = nextStudyQuestion();
     renderStudy();
   } else if (Study.reveal(state, problem)) {
     save();
@@ -372,8 +382,8 @@ function updateStudyTimer() {
 function showStudy() {
   accountPlayTime(false);
   dialogPlot = null;
-  if (!problem || problem.sequence + Number(Boolean(problem.outcome)) !== Study.progress(state)) {
-    problem = Study.question(state);
+  if (!problem || !matchesStudyProgress()) {
+    problem = nextStudyQuestion();
   }
   if (Study.reveal(state, problem)) save();
   renderStudy();
@@ -396,7 +406,7 @@ document.addEventListener("submit", event => {
     save();
     renderStudy();
   } else if (result.status === "stale") {
-    problem = Study.question(state);
+    problem = nextStudyQuestion();
     renderStudy();
   } else {
     byId("study-feedback").textContent = result.status === "empty" ? "答えを入力してね。" : `もう一度考えてみよう。ヒント　${result.hint}`;
@@ -430,7 +440,7 @@ document.addEventListener("click", event => {
     case "help": help(); break;
     case "study-next":
       if (!problem?.outcome) break;
-      problem = Study.question(state);
+      problem = nextStudyQuestion();
       renderStudy();
       return;
     case "close": dialog.close(); break;
