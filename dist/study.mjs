@@ -7,7 +7,7 @@ const initialPlayTime = 90_000;
 export const maxPlayTime = 180_000;
 export const sheckleReward = 10;
 export const title = bank.title;
-const questions = bank.questions.filter(question => question.source.page === 4);
+const questions = bank.questions;
 export const totalQuestions = questions.length;
 
 export const playRemaining = state => Number.isFinite(state.playMs)
@@ -19,7 +19,7 @@ export function spendPlayTime(state, elapsed) {
 }
 
 export function progress(state) {
-  return state.social?.termReviewSeen ?? 0;
+  return state.social?.informationSeen ?? 0;
 }
 
 export function question(state, now = performance.now()) {
@@ -35,7 +35,7 @@ function current(state, problem) {
 
 function finish(state, problem, outcome) {
   state.social ??= { correct: 0, earned: 0 };
-  state.social.termReviewSeen = problem.sequence + 1;
+  state.social.informationSeen = problem.sequence + 1;
   problem.outcome = outcome;
 }
 
